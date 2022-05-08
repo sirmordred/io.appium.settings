@@ -16,17 +16,24 @@
 
 package io.appium.settings;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
+import androidx.core.app.ActivityCompat;
 import io.appium.settings.receivers.AnimationSettingReceiver;
 import io.appium.settings.receivers.BluetoothConnectionSettingReceiver;
 import io.appium.settings.receivers.ClipboardReceiver;
@@ -42,6 +49,8 @@ import io.appium.settings.receivers.WiFiConnectionSettingReceiver;
 
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";
+
+    private String recordingOutputPath = "";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -70,12 +79,104 @@ public class Settings extends Activity {
             LocationTracker.getInstance().start(this);
         }
 
+        // REQUIRED STEPS to activate screenrecord feature:
+        // adb shell pm grant io.appium.settings android.permission.RECORD_AUDIO
+        // adb shell pm grant io.appium.settings android.permission.WRITE_EXTERNAL_STORAGE
+        // adb shell appops set io.appium.settings PROJECT_MEDIA allow
+
+        // TO START SCREENRECORD:
+        // adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_START --es "recording_filename" "abc.mp4"
+
+        // TO STOP SCREENRECORD:
+        // adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_STOP
+
+        // handle screen recording
+        Intent openingIntent = getIntent();
+        if (openingIntent != null && openingIntent.getAction() != null) {
+            if (openingIntent.getAction().equals(RecorderService.ACTION_RECORDING_START)
+                    && isHigherThanP()) {
+                if (checkRecordingPermission()) {
+                    String recordingFilename = openingIntent.getStringExtra(
+                            RecorderService.ACTION_RECORDING_FILENAME);
+
+                    if (recordingFilename == null || recordingFilename.isEmpty()
+                            || !recordingFilename.endsWith(".mp4")) {
+                        recordingFilename = "AppiumScreenRecord.mp4";
+                    }
+
+                    recordingOutputPath = getExternalFilesDir(null).getAbsolutePath()
+                            + File.separator + recordingFilename;
+                    Intent returnedIntent = new Intent();
+                    returnedIntent.putExtra("output", recordingOutputPath);
+                    setResult(Activity.RESULT_OK, returnedIntent);
+
+                    // start record
+                    final MediaProjectionManager manager
+                            = (MediaProjectionManager) getSystemService(
+                                    Context.MEDIA_PROJECTION_SERVICE);
+                    final Intent permissionIntent = manager.createScreenCaptureIntent();
+
+                    startActivityForResult(permissionIntent,
+                            RecorderService.REQUEST_CODE_SCREEN_CAPTURE);
+                } else {
+                    finishActivity();
+                }
+            } else if (openingIntent.getAction().equals(RecorderService.ACTION_RECORDING_STOP)
+                    && isHigherThanP()) {
+                // stop record
+                final Intent intent = new Intent(this, RecorderService.class);
+                intent.setAction(RecorderService.ACTION_RECORDING_STOP);
+                startService(intent);
+
+                finishActivity();
+            } else {
+                finishActivity();
+            }
+        }
+    }
+
+    private void finishActivity() {
         Log.d(TAG, "Closing the app");
         Handler handler = new Handler();
         handler.postDelayed(Settings.this::finish, 1000);
     }
 
-    private void registerSettingsReceivers(List<Class<? extends BroadcastReceiver>> receiverClasses) {
+    private boolean checkRecordingPermission() {
+        // Check if we have required permission
+        int permission = ActivityCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        int permissionAudio = ActivityCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.RECORD_AUDIO);
+
+        return permission == PackageManager.PERMISSION_GRANTED
+                && permissionAudio == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean isHigherThanP() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
+    }
+
+    @Override
+    protected void onActivityResult(final int requestCode, final int resultCode, final Intent data)
+    {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (RecorderService.REQUEST_CODE_SCREEN_CAPTURE == requestCode) {
+            if (resultCode == Activity.RESULT_OK) {
+                final Intent intent = new Intent(this, RecorderService.class);
+                intent.setAction(RecorderService.ACTION_RECORDING_START);
+                intent.putExtra(RecorderService.ACTION_RECORDING_RESULT_CODE, resultCode);
+                intent.putExtra(RecorderService.ACTION_RECORDING_FILENAME, recordingOutputPath);
+                intent.putExtras(data);
+
+                startService(intent);
+            }
+        }
+
+        finishActivity();
+    }
+
+    private void registerSettingsReceivers(List<Class<? extends BroadcastReceiver>> receiverClasses)
+    {
         for (Class<? extends BroadcastReceiver> receiverClass: receiverClasses) {
             try {
                 final BroadcastReceiver receiver = receiverClass.newInstance();
