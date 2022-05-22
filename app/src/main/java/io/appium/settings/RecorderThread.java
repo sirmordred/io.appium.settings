@@ -280,13 +280,14 @@ public class RecorderThread implements Runnable {
                     audioEncoder.releaseOutputBuffer(encoderStatus, false);
 
                     if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        Log.e(TAG, "buffer eos");
+                        Log.v(TAG, "buffer eos");
                         break;
                     }
                 }
 
-                if (videoTrackIndex >= 0 && audioTrackIndex < 0)
+                if (videoTrackIndex >= 0 && audioTrackIndex < 0) {
                     continue; // wait for audio config before processing any video data frames
+                }
 
                 encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo, 10000);
                 if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
@@ -317,7 +318,7 @@ public class RecorderThread implements Runnable {
                     videoEncoder.releaseOutputBuffer(encoderStatus, false);
 
                     if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        Log.w(TAG, "videoEncoder, buffer eos");
+                        Log.v(TAG, "videoEncoder, buffer eos");
                         break;
                     }
                 }

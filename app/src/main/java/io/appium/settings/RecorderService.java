@@ -58,7 +58,9 @@ public class RecorderService extends Service {
             MediaProjectionManager mMediaProjectionManager =
                     (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
-            startScreenRecord(mMediaProjectionManager, intent);
+            if (mMediaProjectionManager != null) {
+                startScreenRecord(mMediaProjectionManager, intent);
+            }
         } else if (ACTION_RECORDING_STOP.equals(action)) {
             Log.v(TAG, "onStartCommand:intent=" + "stop");
             stopScreenRecord();
@@ -86,21 +88,21 @@ public class RecorderService extends Service {
                 final DisplayMetrics metrics = getResources().getDisplayMetrics();
                 int width = metrics.widthPixels;
                 int height = metrics.heightPixels;
+                float scale;
+                final float scaleX;
+                final float scaleY;
                 if (width > height) {
                     // Horizontal
-                    final float scale_x = width / 1920f;
-                    final float scale_y = height / 1080f;
-                    final float scale = Math.max(scale_x,  scale_y);
-                    width = (int)(width / scale);
-                    height = (int)(height / scale);
+                    scaleX = width / 1920f;
+                    scaleY = height / 1080f;
                 } else {
                     // Vertical
-                    final float scale_x = width / 1080f;
-                    final float scale_y = height / 1920f;
-                    final float scale = Math.max(scale_x,  scale_y);
-                    width = (int)(width / scale);
-                    height = (int)(height / scale);
+                    scaleX = width / 1080f;
+                    scaleY = height / 1920f;
                 }
+                scale = Math.max(scaleX,  scaleY);
+                width = (int)(width / scale);
+                height = (int)(height / scale);
                 Log.v(TAG, String.format("startRecording:(%d,%d)(%d,%d)",
                         metrics.widthPixels, metrics.heightPixels, width, height));
                 String outputFilePath = intent.getStringExtra(ACTION_RECORDING_FILENAME);
@@ -108,6 +110,8 @@ public class RecorderService extends Service {
                     recorderThread = new RecorderThread(projection, outputFilePath, width, height,
                             calcBitRate(30, width, height));
                     recorderThread.startRecording();
+                } else {
+                    Log.i(TAG, "outputFilePath == null");
                 }
             }
         }
@@ -125,6 +129,7 @@ public class RecorderService extends Service {
     private void stopScreenRecord() {
         if (recorderThread != null) {
             recorderThread.stopRecording();
+            recorderThread = null;
         }
         stopSelf();
     }

@@ -321,6 +321,31 @@ and add them to the media library if their MIME types are supported. If the
 file/folder in _path_ does not exist/is not readable or is not provided then an
 error will be returned and the corresponding log message would be written into logs.
 
+## Internal Audio & Video Recording
+
+REQUIRED STEPS to activate recording:
+
+```bash
+adb shell pm grant io.appium.settings android.permission.RECORD_AUDIO
+adb shell pm grant io.appium.settings android.permission.WRITE_EXTERNAL_STORAGE
+adb shell appops set io.appium.settings PROJECT_MEDIA allow
+```
+
+Start Recording:
+```bash
+adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_START --es "recording_filename" "abc.mp4"
+```
+
+Stop Recording:
+```bash
+adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_STOP
+```
+
+Obtain Recording Output File:
+```bash
+adb pull /storage/sdcard0/Android/data/io.appium.settings/files/abc.mp4 abc.mp4
+```
+
 
 ## Notes:
 

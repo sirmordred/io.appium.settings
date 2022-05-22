@@ -79,23 +79,14 @@ public class Settings extends Activity {
             LocationTracker.getInstance().start(this);
         }
 
-        // REQUIRED STEPS to activate screenrecord feature:
-        // adb shell pm grant io.appium.settings android.permission.RECORD_AUDIO
-        // adb shell pm grant io.appium.settings android.permission.WRITE_EXTERNAL_STORAGE
-        // adb shell appops set io.appium.settings PROJECT_MEDIA allow
+        handleRecording(getIntent());
+    }
 
-        // TO START SCREENRECORD:
-        // adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_START --es "recording_filename" "abc.mp4"
-
-        // TO STOP SCREENRECORD:
-        // adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_STOP
-
-        // handle screen recording
-        Intent openingIntent = getIntent();
+    private void handleRecording(Intent openingIntent) {
         if (openingIntent != null && openingIntent.getAction() != null) {
             if (openingIntent.getAction().equals(RecorderService.ACTION_RECORDING_START)
                     && isHigherThanP()) {
-                if (checkRecordingPermission()) {
+                if (areRecordingPermissionsGranted()) {
                     String recordingFilename = openingIntent.getStringExtra(
                             RecorderService.ACTION_RECORDING_FILENAME);
 
@@ -113,7 +104,7 @@ public class Settings extends Activity {
                     // start record
                     final MediaProjectionManager manager
                             = (MediaProjectionManager) getSystemService(
-                                    Context.MEDIA_PROJECTION_SERVICE);
+                            Context.MEDIA_PROJECTION_SERVICE);
                     final Intent permissionIntent = manager.createScreenCaptureIntent();
 
                     startActivityForResult(permissionIntent,
@@ -141,7 +132,7 @@ public class Settings extends Activity {
         handler.postDelayed(Settings.this::finish, 1000);
     }
 
-    private boolean checkRecordingPermission() {
+    private boolean areRecordingPermissionsGranted() {
         // Check if we have required permission
         int permission = ActivityCompat.checkSelfPermission(getApplicationContext(),
                 Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -160,16 +151,15 @@ public class Settings extends Activity {
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data)
     {
         super.onActivityResult(requestCode, resultCode, data);
-        if (RecorderService.REQUEST_CODE_SCREEN_CAPTURE == requestCode) {
-            if (resultCode == Activity.RESULT_OK) {
-                final Intent intent = new Intent(this, RecorderService.class);
-                intent.setAction(RecorderService.ACTION_RECORDING_START);
-                intent.putExtra(RecorderService.ACTION_RECORDING_RESULT_CODE, resultCode);
-                intent.putExtra(RecorderService.ACTION_RECORDING_FILENAME, recordingOutputPath);
-                intent.putExtras(data);
+        if (RecorderService.REQUEST_CODE_SCREEN_CAPTURE == requestCode
+                && resultCode == Activity.RESULT_OK) {
+            final Intent intent = new Intent(this, RecorderService.class);
+            intent.setAction(RecorderService.ACTION_RECORDING_START);
+            intent.putExtra(RecorderService.ACTION_RECORDING_RESULT_CODE, resultCode);
+            intent.putExtra(RecorderService.ACTION_RECORDING_FILENAME, recordingOutputPath);
+            intent.putExtras(data);
 
-                startService(intent);
-            }
+            startService(intent);
         }
 
         finishActivity();
