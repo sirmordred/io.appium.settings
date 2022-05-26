@@ -1,6 +1,5 @@
 package io.appium.settings;
 
-import android.annotation.SuppressLint;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.AudioAttributes;
@@ -12,6 +11,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.media.projection.MediaProjection;
+import android.os.Build;
 import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -19,6 +19,8 @@ import android.view.Surface;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import androidx.annotation.RequiresApi;
 
 public class RecorderThread implements Runnable {
 
@@ -46,8 +48,6 @@ public class RecorderThread implements Runnable {
     private int videoWidth;
     private int videoHeight;
     private int videoBitrate;
-    private int frameRate;
-    private int timeLapse;
     private int sampleRate;
     private Thread recordingThread;
 
@@ -55,7 +55,7 @@ public class RecorderThread implements Runnable {
     private volatile boolean audioStopped;
     private volatile boolean asyncError = false;
 
-    @SuppressLint("NewApi")
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private VirtualDisplay.Callback displayCallback = new VirtualDisplay.Callback() {
         @Override
         public void onPaused() {
@@ -80,9 +80,7 @@ public class RecorderThread implements Runnable {
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
         this.videoBitrate = videoBitrate;
-        this.sampleRate = 44100;
-        this.timeLapse = 1;
-        this.frameRate = 30;
+        this.sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE;
         videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
     }
 
@@ -107,9 +105,12 @@ public class RecorderThread implements Runnable {
         encoderFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE, videoBitrate);
-        encoderFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
-        encoderFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000);
-        encoderFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 5);
+        encoderFormat.setInteger(MediaFormat.KEY_FRAME_RATE,
+                RecorderConstant.VIDEO_CODEC_FRAME_RATE);
+        encoderFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER,
+                RecorderConstant.AUDIO_CODEC_REPEAT_PREV_FRAME_AFTER);
+        encoderFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,
+                RecorderConstant.AUDIO_CODEC_I_FRAME_INTERVAL);
 
         videoEncoder = MediaCodec.createEncoderByType(videoMime);
         videoEncoder.configure(encoderFormat, null, null,
@@ -118,7 +119,7 @@ public class RecorderThread implements Runnable {
         videoEncoder.start();
     }
 
-    @SuppressLint("NewApi")
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void setupVirtualDisplay() {
         virtualDisplay = mediaProjection.createVirtualDisplay("Appium Screen Recorder",
                 videoWidth, videoHeight, DisplayMetrics.DENSITY_HIGH,
@@ -129,8 +130,9 @@ public class RecorderThread implements Runnable {
     private void setupAudioCodec() throws IOException {
         // Encoded video resolution matches virtual display. TODO set channelCount 2 try stereo quality
         MediaFormat encoderFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC,
-                sampleRate, 1);
-        encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE, 64000);
+                sampleRate, RecorderConstant.AUDIO_CODEC_CHANNEL_COUNT);
+        encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE,
+                RecorderConstant.AUDIO_CODEC_DEFAULT_BITRATE);
 
         audioEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
         audioEncoder.configure(encoderFormat, null, null,
@@ -138,7 +140,7 @@ public class RecorderThread implements Runnable {
         audioEncoder.start();
     }
 
-    @SuppressLint("NewApi")
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     private void setupAudioRecord() {
         int channelConfig = AudioFormat.CHANNEL_IN_MONO;
         int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig,
@@ -161,7 +163,7 @@ public class RecorderThread implements Runnable {
                 .build();
     }
 
-    @SuppressLint("NewApi")
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void startAudioRecord() {
         audioRecordThread = new Thread(new Runnable() {
             @Override
@@ -176,7 +178,8 @@ public class RecorderThread implements Runnable {
                 }
                 try {
                     while (!audioStopped) {
-                        int index = audioEncoder.dequeueInputBuffer(10000);
+                        int index = audioEncoder.dequeueInputBuffer(
+                                RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
                         if (index < 0) {
                             continue;
                         }
@@ -216,10 +219,12 @@ public class RecorderThread implements Runnable {
 
     private long getPresentationTimeUs() {
         if (!startTimestampInitialized) {
-            startTimestampUs = System.nanoTime() / 1000;
+            startTimestampUs =
+                    System.nanoTime() / RecorderConstant.ENCODER_PRESENTATION_TIME_DEFAULT_DIVIDER;
             startTimestampInitialized = true;
         }
-        return (System.nanoTime() / 1000 - startTimestampUs) / timeLapse;
+        return (System.nanoTime() / RecorderConstant.ENCODER_PRESENTATION_TIME_DEFAULT_DIVIDER
+                        - startTimestampUs);
     }
 
     private void startMuxerIfSetUp() {
@@ -229,7 +234,7 @@ public class RecorderThread implements Runnable {
         }
     }
 
-    @SuppressLint("NewApi")
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void run() {
         try {
@@ -289,7 +294,8 @@ public class RecorderThread implements Runnable {
                     continue; // wait for audio config before processing any video data frames
                 }
 
-                encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo, 10000);
+                encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo,
+                        RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
                 if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
                     Log.w(TAG, "encoder.dequeueOutputBuffer: try again");
                 } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
@@ -326,42 +332,43 @@ public class RecorderThread implements Runnable {
         } catch (Exception mainException) {
             mainException.printStackTrace();
         } finally {
-            try {
-                if (muxer != null) {
-                    muxer.stop();
-                    muxer.release();
-                    muxer = null;
-                }
+            if (muxer != null) {
+                muxer.stop();
+                muxer.release();
+                muxer = null;
+            }
 
-                if (virtualDisplay != null) {
-                    virtualDisplay.release();
-                    virtualDisplay = null;
-                }
+            if (virtualDisplay != null) {
+                virtualDisplay.release();
+                virtualDisplay = null;
+            }
 
-                if (surface != null) {
-                    surface.release();
-                    surface = null;
-                }
+            if (surface != null) {
+                surface.release();
+                surface = null;
+            }
 
-                if (videoEncoder != null) {
-                    videoEncoder.stop();
-                    videoEncoder.release();
-                    videoEncoder = null;
-                }
+            if (videoEncoder != null) {
+                videoEncoder.stop();
+                videoEncoder.release();
+                videoEncoder = null;
+            }
 
-                if (audioRecordThread != null) {
-                    audioStopped = true;
+            if (audioRecordThread != null) {
+                audioStopped = true;
+                try {
                     audioRecordThread.join();
+                    audioRecordThread = null;
+                } catch (InterruptedException e) {
+                    Log.w(TAG, "Error releasing resources, audioRecordThread: ", e);
+                    e.printStackTrace();
                 }
+            }
 
-                if (audioEncoder != null) {
-                    audioEncoder.stop();
-                    audioEncoder.release();
-                    audioEncoder = null;
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "Error releasing resources", e);
-                e.printStackTrace();
+            if (audioEncoder != null) {
+                audioEncoder.stop();
+                audioEncoder.release();
+                audioEncoder = null;
             }
         }
     }

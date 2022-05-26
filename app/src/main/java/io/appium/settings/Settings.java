@@ -30,8 +30,11 @@ import android.os.Handler;
 import android.util.Log;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import androidx.core.app.ActivityCompat;
 import io.appium.settings.receivers.AnimationSettingReceiver;
@@ -92,7 +95,10 @@ public class Settings extends Activity {
 
                     if (recordingFilename == null || recordingFilename.isEmpty()
                             || !recordingFilename.endsWith(".mp4")) {
-                        recordingFilename = "AppiumScreenRecord.mp4";
+                        String timeStamp = new SimpleDateFormat(
+                                "yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date());
+                        recordingFilename = RecorderConstant.DEFAULT_RECORDING_FILENAME +
+                                "_" + timeStamp + ".mp4";
                     }
 
                     recordingOutputPath = getExternalFilesDir(null).getAbsolutePath()
