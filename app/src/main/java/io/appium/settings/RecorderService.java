@@ -89,42 +89,31 @@ public class RecorderService extends Service {
             if (projection != null) {
                 Log.v(TAG, "projection different from null");
                 final DisplayMetrics metrics = getResources().getDisplayMetrics();
-                int width = metrics.widthPixels;
-                int height = metrics.heightPixels;
-                float scale;
-                final float scaleX;
-                final float scaleY;
-                if (width > height) {
-                    // Horizontal
-                    scaleX = width / 1920f;
-                    scaleY = height / 1080f;
-                } else {
-                    // Vertical
-                    scaleX = width / 1080f;
-                    scaleY = height / 1920f;
+                int rawWidth = metrics.widthPixels;
+                int rawHeight = metrics.heightPixels;
+                boolean isRotated = false;
+                if (rawWidth > rawHeight) {
+                    // landscape mode
+                    isRotated = true;
+                    /* TODO we need to rotate frames that comes from virtual screen before writing to file via muxer,
+                    *  for handling landscape mode properly, rotateYuvImages somehow fast and reliable
+                    *  for now, just flip width and height to fake and force portrait mode instead of landscape
+                    * */
+                    rawWidth = metrics.heightPixels;
+                    rawHeight = metrics.widthPixels;
                 }
-                scale = Math.max(scaleX,  scaleY);
-                width = (int)(width / scale);
-                height = (int)(height / scale);
                 Log.v(TAG, String.format("startRecording:(%d,%d)(%d,%d)",
-                        metrics.widthPixels, metrics.heightPixels, width, height));
+                        metrics.widthPixels, metrics.heightPixels, rawWidth, rawHeight));
                 String outputFilePath = intent.getStringExtra(ACTION_RECORDING_FILENAME);
                 if (outputFilePath != null) {
-                    recorderThread = new RecorderThread(projection, outputFilePath, width, height,
-                            calcBitRate(width, height));
+                    recorderThread = new RecorderThread(projection, outputFilePath,
+                            rawWidth, rawHeight, isRotated);
                     recorderThread.startRecording();
                 } else {
                     Log.i(TAG, "outputFilePath == null");
                 }
             }
         }
-    }
-
-    protected int calcBitRate(int width, int height) {
-        final int bitrate = (int) (RecorderConstant.BITRATE_MULTIPLIER *
-                RecorderConstant.VIDEO_CODEC_FRAME_RATE * width * height);
-        Log.i(TAG, String.format("bitrate=%5.2f[Mbps]", bitrate / 1024f / 1024f));
-        return bitrate;
     }
 
     /**

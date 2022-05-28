@@ -50,6 +50,7 @@ public class RecorderThread implements Runnable {
     private int videoBitrate;
     private int sampleRate;
     private Thread recordingThread;
+    private boolean isRotated;
 
     private volatile boolean stopped = false;
     private volatile boolean audioStopped;
@@ -73,14 +74,14 @@ public class RecorderThread implements Runnable {
     };
 
     public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
-                          int videoWidth, int videoHeight, int videoBitrate) {
+                          int videoWidth, int videoHeight, boolean isRotated) {
         this.mediaProjection = mediaProjection;
         handler = new Handler();
         this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
-        this.videoBitrate = videoBitrate;
         this.sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE;
+        this.isRotated = isRotated;
         videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
     }
 
@@ -98,8 +99,20 @@ public class RecorderThread implements Runnable {
         return stopped;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void setupVideoCodec() throws IOException {
-        // Encoded video resolution matches virtual display.
+        // Encoded video resolution MUST match virtual display.
+        videoEncoder = MediaCodec.createEncoderByType(videoMime);
+
+        /* Clamp raw width/height of device screen with video encoder's capabilities
+        *  to avoid crash.
+        * */
+        MediaCodecInfo.VideoCapabilities videoEncoderCapabilities = videoEncoder.getCodecInfo().
+                getCapabilitiesForType(videoMime).getVideoCapabilities();
+        this.videoWidth = videoEncoderCapabilities.getSupportedWidths().clamp(this.videoWidth);
+        this.videoHeight = videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
+        this.videoBitrate = calcBitRate(videoWidth, videoHeight);
+
         MediaFormat encoderFormat = MediaFormat.createVideoFormat(videoMime, videoWidth,
                 videoHeight);
         encoderFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,
@@ -112,7 +125,6 @@ public class RecorderThread implements Runnable {
         encoderFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,
                 RecorderConstant.AUDIO_CODEC_I_FRAME_INTERVAL);
 
-        videoEncoder = MediaCodec.createEncoderByType(videoMime);
         videoEncoder.configure(encoderFormat, null, null,
                 MediaCodec.CONFIGURE_FLAG_ENCODE);
         surface = videoEncoder.createInputSurface();
@@ -227,6 +239,13 @@ public class RecorderThread implements Runnable {
                         - startTimestampUs);
     }
 
+    private int calcBitRate(int width, int height) {
+        final int bitrate = (int) (RecorderConstant.BITRATE_MULTIPLIER *
+                RecorderConstant.VIDEO_CODEC_FRAME_RATE * width * height);
+        Log.i(TAG, String.format("bitrate=%5.2f[Mbps]", bitrate / 1024f / 1024f));
+        return bitrate;
+    }
+
     private void startMuxerIfSetUp() {
         if (audioTrackIndex >= 0 && videoTrackIndex >= 0) {
             muxer.start();
@@ -246,6 +265,12 @@ public class RecorderThread implements Runnable {
 
             muxer = new MediaMuxer(this.outputFilePath,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+
+            // set output file orientation info if it is in landscape mode (default is 0==portrait)
+            // note: this method must be run before muxer.start()
+            if (isRotated) {
+                muxer.setOrientationHint(90);
+            }
 
             startAudioRecord();
 
