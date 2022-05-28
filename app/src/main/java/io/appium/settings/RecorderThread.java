@@ -56,6 +56,9 @@ public class RecorderThread implements Runnable {
     private volatile boolean audioStopped;
     private volatile boolean asyncError = false;
 
+    private MediaCodec.BufferInfo bufferInfo;
+    private long lastAudioTimestampUs;
+
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private VirtualDisplay.Callback displayCallback = new VirtualDisplay.Callback() {
         @Override
@@ -83,6 +86,8 @@ public class RecorderThread implements Runnable {
         this.sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE;
         this.isRotated = isRotated;
         videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
+        bufferInfo = new MediaCodec.BufferInfo();
+        lastAudioTimestampUs = -1;
     }
 
     public void startRecording() {
@@ -253,6 +258,84 @@ public class RecorderThread implements Runnable {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private boolean writeAudioBufferToFile() {
+        int encoderStatus;
+
+        encoderStatus = audioEncoder.dequeueOutputBuffer(this.bufferInfo, 0);
+        if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+            if (audioTrackIndex > 0) {
+                Log.e(TAG, "audioTrackIndex less than zero");
+                return false;
+            }
+            audioTrackIndex = muxer.addTrack(audioEncoder.getOutputFormat());
+            startMuxerIfSetUp();
+        } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
+            Log.w(TAG, "unexpected result from audio encoder.dequeueOutputBuffer: "
+                    + encoderStatus);
+        } else if (encoderStatus >= 0) {
+            ByteBuffer encodedData = audioEncoder.getOutputBuffer(encoderStatus);
+            if (encodedData == null) {
+                Log.e(TAG, "encodedData null");
+                return false;
+            }
+
+            if (this.bufferInfo.presentationTimeUs > this.lastAudioTimestampUs
+                    && muxerStarted && this.bufferInfo.size != 0 &&
+                    (this.bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                this.lastAudioTimestampUs = this.bufferInfo.presentationTimeUs;
+                muxer.writeSampleData(audioTrackIndex, encodedData, this.bufferInfo);
+            }
+
+            audioEncoder.releaseOutputBuffer(encoderStatus, false);
+
+            if ((this.bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                Log.v(TAG, "buffer eos");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private boolean writeVideoBufferToFile() {
+        int encoderStatus;
+
+        encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo,
+                RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
+        if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+            if (videoTrackIndex > 0) {
+                Log.e(TAG, "videoTrackIndex less than zero");
+                return false;
+            }
+            videoTrackIndex = muxer.addTrack(videoEncoder.getOutputFormat());
+            startMuxerIfSetUp();
+        } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
+            Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: "
+                    + encoderStatus);
+        } else if (encoderStatus >= 0) {
+            ByteBuffer encodedData = videoEncoder.getOutputBuffer(encoderStatus);
+            if (encodedData == null) {
+                Log.w(TAG, "videoEncoder, encodedData null");
+                return false;
+            }
+
+            if (bufferInfo.size != 0 &&
+                    (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                bufferInfo.presentationTimeUs = getPresentationTimeUs();
+                muxer.writeSampleData(videoTrackIndex, encodedData, bufferInfo);
+            }
+
+            videoEncoder.releaseOutputBuffer(encoderStatus, false);
+
+            if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                Log.v(TAG, "videoEncoder, buffer eos");
+                return false;
+            }
+        }
+        return true;
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void run() {
@@ -274,80 +357,20 @@ public class RecorderThread implements Runnable {
 
             startAudioRecord();
 
-            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-            long lastAudioTimestampUs = -1;
+            bufferInfo = new MediaCodec.BufferInfo();
+            lastAudioTimestampUs = -1;
 
             while (!stopped && !asyncError) {
-                int encoderStatus;
-
-                encoderStatus = audioEncoder.dequeueOutputBuffer(bufferInfo, 0);
-                if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    if (audioTrackIndex > 0) {
-                        Log.e(TAG, "audioTrackIndex less than zero");
-                        break;
-                    }
-                    audioTrackIndex = muxer.addTrack(audioEncoder.getOutputFormat());
-                    startMuxerIfSetUp();
-                } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    Log.w(TAG, "unexpected result from audio encoder.dequeueOutputBuffer: "
-                            + encoderStatus);
-                } else if (encoderStatus >= 0) {
-                    ByteBuffer encodedData = audioEncoder.getOutputBuffer(encoderStatus);
-                    if (encodedData == null) {
-                        Log.e(TAG, "encodedData null");
-                        break;
-                    }
-
-                    if (bufferInfo.presentationTimeUs > lastAudioTimestampUs
-                            && muxerStarted && bufferInfo.size != 0 &&
-                            (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
-                        lastAudioTimestampUs = bufferInfo.presentationTimeUs;
-                        muxer.writeSampleData(audioTrackIndex, encodedData, bufferInfo);
-                    }
-
-                    audioEncoder.releaseOutputBuffer(encoderStatus, false);
-
-                    if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        Log.v(TAG, "buffer eos");
-                        break;
-                    }
+                if (!writeAudioBufferToFile()) {
+                    break;
                 }
 
                 if (videoTrackIndex >= 0 && audioTrackIndex < 0) {
                     continue; // wait for audio config before processing any video data frames
                 }
 
-                encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo,
-                        RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
-                if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    if (videoTrackIndex > 0) {
-                        Log.e(TAG, "videoTrackIndex less than zero");
-                        break;
-                    }
-                    videoTrackIndex = muxer.addTrack(videoEncoder.getOutputFormat());
-                    startMuxerIfSetUp();
-                } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: "
-                            + encoderStatus);
-                } else if (encoderStatus >= 0) {
-                    ByteBuffer encodedData = videoEncoder.getOutputBuffer(encoderStatus);
-                    if (encodedData == null) {
-                        Log.w(TAG, "videoEncoder, encodedData null");
-                        break;
-                    }
-
-                    if (bufferInfo.size != 0 &&
-                            (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
-                        bufferInfo.presentationTimeUs = getPresentationTimeUs();
-                        muxer.writeSampleData(videoTrackIndex, encodedData, bufferInfo);
-                    }
-
-                    videoEncoder.releaseOutputBuffer(encoderStatus, false);
-
-                    if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        Log.v(TAG, "videoEncoder, buffer eos");
-                        break;
-                    }
+                if (!writeVideoBufferToFile()) {
+                    break;
                 }
             }
         } catch (Exception mainException) {
