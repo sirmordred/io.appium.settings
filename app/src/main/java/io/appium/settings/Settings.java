@@ -103,9 +103,6 @@ public class Settings extends Activity {
 
                     recordingOutputPath = getExternalFilesDir(null).getAbsolutePath()
                             + File.separator + recordingFilename;
-                    Intent returnedIntent = new Intent();
-                    returnedIntent.putExtra("output", recordingOutputPath);
-                    setResult(Activity.RESULT_OK, returnedIntent);
 
                     // start record
                     final MediaProjectionManager manager
