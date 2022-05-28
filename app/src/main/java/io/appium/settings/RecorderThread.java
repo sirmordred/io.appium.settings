@@ -256,19 +256,17 @@ public class RecorderThread implements Runnable {
                 int encoderStatus;
 
                 encoderStatus = audioEncoder.dequeueOutputBuffer(bufferInfo, 0);
-                if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    Log.w(TAG, "audio encoder.dequeueOutputBuffer: try again");
-                } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     if (audioTrackIndex > 0) {
                         Log.e(TAG, "audioTrackIndex less than zero");
                         break;
                     }
                     audioTrackIndex = muxer.addTrack(audioEncoder.getOutputFormat());
                     startMuxerIfSetUp();
-                } else if (encoderStatus < 0) {
+                } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
                     Log.w(TAG, "unexpected result from audio encoder.dequeueOutputBuffer: "
                             + encoderStatus);
-                } else {
+                } else if (encoderStatus >= 0) {
                     ByteBuffer encodedData = audioEncoder.getOutputBuffer(encoderStatus);
                     if (encodedData == null) {
                         Log.e(TAG, "encodedData null");
@@ -296,19 +294,17 @@ public class RecorderThread implements Runnable {
 
                 encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo,
                         RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
-                if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    Log.w(TAG, "encoder.dequeueOutputBuffer: try again");
-                } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     if (videoTrackIndex > 0) {
                         Log.e(TAG, "videoTrackIndex less than zero");
                         break;
                     }
                     videoTrackIndex = muxer.addTrack(videoEncoder.getOutputFormat());
                     startMuxerIfSetUp();
-                } else if (encoderStatus < 0) {
+                } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
                     Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: "
                             + encoderStatus);
-                } else {
+                } else if (encoderStatus >= 0) {
                     ByteBuffer encodedData = videoEncoder.getOutputBuffer(encoderStatus);
                     if (encodedData == null) {
                         Log.w(TAG, "videoEncoder, encodedData null");
