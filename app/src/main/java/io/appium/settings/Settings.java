@@ -108,10 +108,14 @@ public class Settings extends Activity {
                     final MediaProjectionManager manager
                             = (MediaProjectionManager) getSystemService(
                             Context.MEDIA_PROJECTION_SERVICE);
-                    final Intent permissionIntent = manager.createScreenCaptureIntent();
+                    if (manager != null) {
+                        final Intent permissionIntent = manager.createScreenCaptureIntent();
 
-                    startActivityForResult(permissionIntent,
-                            RecorderService.REQUEST_CODE_SCREEN_CAPTURE);
+                        startActivityForResult(permissionIntent,
+                                RecorderService.REQUEST_CODE_SCREEN_CAPTURE);
+                    } else {
+                        Log.e(TAG, "manager(MediaProjectionManager) null");
+                    }
                 } else {
                     finishActivity();
                 }
