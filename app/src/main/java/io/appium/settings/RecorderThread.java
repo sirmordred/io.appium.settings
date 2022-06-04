@@ -50,7 +50,7 @@ public class RecorderThread implements Runnable {
     private AudioRecord audioRecord;
     private MediaMuxer muxer;
     private boolean muxerStarted;
-    private boolean startTimestampInitialized;
+    private boolean isStartTimestampInitialized = false;
     private long startTimestampUs;
     private final Handler handler;
     private Thread audioRecordThread;
@@ -63,10 +63,7 @@ public class RecorderThread implements Runnable {
     private final String videoMime;
     private int videoWidth;
     private int videoHeight;
-    private int videoBitrate;
     private final int sampleRate;
-    private Thread recordingThread;
-    //private final boolean isRotated;
     private final int recordingRotation;
 
     private volatile boolean stopped = false;
@@ -108,7 +105,7 @@ public class RecorderThread implements Runnable {
 
     public void startRecording() {
         stopped = false;
-        recordingThread = new Thread(this);
+        Thread recordingThread = new Thread(this);
         recordingThread.start();
     }
 
@@ -117,7 +114,7 @@ public class RecorderThread implements Runnable {
     }
 
     public boolean isRecordingRunning() {
-        return stopped;
+        return !stopped;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -132,7 +129,7 @@ public class RecorderThread implements Runnable {
                 getCapabilitiesForType(videoMime).getVideoCapabilities();
         this.videoWidth = videoEncoderCapabilities.getSupportedWidths().clamp(this.videoWidth);
         this.videoHeight = videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
-        this.videoBitrate = calcBitRate(videoWidth, videoHeight);
+        int videoBitrate = calcBitRate(videoWidth, videoHeight);
 
         MediaFormat encoderFormat = MediaFormat.createVideoFormat(videoMime, videoWidth,
                 videoHeight);
@@ -251,10 +248,10 @@ public class RecorderThread implements Runnable {
     }
 
     private long getPresentationTimeUs() {
-        if (!startTimestampInitialized) {
+        if (!isStartTimestampInitialized) {
             startTimestampUs =
                     System.nanoTime() / RecorderConstant.NANOSECOND_TO_MICROSECOND;
-            startTimestampInitialized = true;
+            isStartTimestampInitialized = true;
         }
         return (System.nanoTime() / RecorderConstant.NANOSECOND_TO_MICROSECOND
                         - startTimestampUs);
