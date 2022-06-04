@@ -1,3 +1,19 @@
+/*
+  Copyright 2012-present Appium Committers
+  <p>
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  <p>
+  http://www.apache.org/licenses/LICENSE-2.0
+  <p>
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+ */
+
 package io.appium.settings;
 
 import android.hardware.display.DisplayManager;
@@ -26,7 +42,7 @@ public class RecorderThread implements Runnable {
 
     private static final String TAG = "RecorderThread";
 
-    private MediaProjection mediaProjection;
+    private final MediaProjection mediaProjection;
     private VirtualDisplay virtualDisplay;
     private Surface surface;
     private MediaCodec audioEncoder;
@@ -36,31 +52,32 @@ public class RecorderThread implements Runnable {
     private boolean muxerStarted;
     private boolean startTimestampInitialized;
     private long startTimestampUs;
-    private Handler handler;
+    private final Handler handler;
     private Thread audioRecordThread;
 
     private int videoTrackIndex = -1;
     private int audioTrackIndex = -1;
 
 
-    private String outputFilePath;
-    private String videoMime;
+    private final String outputFilePath;
+    private final String videoMime;
     private int videoWidth;
     private int videoHeight;
     private int videoBitrate;
-    private int sampleRate;
+    private final int sampleRate;
     private Thread recordingThread;
-    private boolean isRotated;
+    //private final boolean isRotated;
+    private final int recordingRotation;
 
     private volatile boolean stopped = false;
     private volatile boolean audioStopped;
-    private volatile boolean asyncError = false;
+    private volatile boolean hasAsyncError = false;
 
     private MediaCodec.BufferInfo bufferInfo;
-    private long lastAudioTimestampUs;
+    private long lastAudioTimestampUs = -1;
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private VirtualDisplay.Callback displayCallback = new VirtualDisplay.Callback() {
+    private final VirtualDisplay.Callback displayCallback = new VirtualDisplay.Callback() {
         @Override
         public void onPaused() {
             super.onPaused();
@@ -71,23 +88,22 @@ public class RecorderThread implements Runnable {
         public void onStopped() {
             super.onStopped();
             if (!stopped) {
-                asyncError = true;
+                hasAsyncError = true;
             }
         }
     };
 
     public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
-                          int videoWidth, int videoHeight, boolean isRotated) {
+                          int videoWidth, int videoHeight, int recordingRotation) {
         this.mediaProjection = mediaProjection;
         handler = new Handler();
         this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
-        this.sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE;
-        this.isRotated = isRotated;
+        this.sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE_HZ;
+        this.recordingRotation = recordingRotation;
         videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
         bufferInfo = new MediaCodec.BufferInfo();
-        lastAudioTimestampUs = -1;
     }
 
     public void startRecording() {
@@ -100,7 +116,7 @@ public class RecorderThread implements Runnable {
         stopped = true;
     }
 
-    public boolean isRecordingContinue() {
+    public boolean isRecordingRunning() {
         return stopped;
     }
 
@@ -126,9 +142,9 @@ public class RecorderThread implements Runnable {
         encoderFormat.setInteger(MediaFormat.KEY_FRAME_RATE,
                 RecorderConstant.VIDEO_CODEC_FRAME_RATE);
         encoderFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER,
-                RecorderConstant.AUDIO_CODEC_REPEAT_PREV_FRAME_AFTER);
+                RecorderConstant.AUDIO_CODEC_REPEAT_PREV_FRAME_AFTER_MS);
         encoderFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,
-                RecorderConstant.AUDIO_CODEC_I_FRAME_INTERVAL);
+                RecorderConstant.AUDIO_CODEC_I_FRAME_INTERVAL_MS);
 
         videoEncoder.configure(encoderFormat, null, null,
                 MediaCodec.CONFIGURE_FLAG_ENCODE);
@@ -137,8 +153,8 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void setupVirtualDisplay() {
-        virtualDisplay = mediaProjection.createVirtualDisplay("Appium Screen Recorder",
+    private VirtualDisplay setupVirtualDisplay() {
+        return mediaProjection.createVirtualDisplay("Appium Screen Recorder",
                 videoWidth, videoHeight, DisplayMetrics.DENSITY_HIGH,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 surface, displayCallback, handler);
@@ -163,8 +179,8 @@ public class RecorderThread implements Runnable {
         int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig,
                 AudioFormat.ENCODING_PCM_16BIT);
 
-        AudioFormat.Builder audioFormatBuilder = new AudioFormat.Builder();
-        AudioFormat newAudioFormat = audioFormatBuilder.setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+        AudioFormat audioFormat = new AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .setSampleRate(sampleRate)
                 .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
                 .build();
@@ -174,7 +190,7 @@ public class RecorderThread implements Runnable {
                 new AudioPlaybackCaptureConfiguration.Builder(this.mediaProjection)
                         .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
                         .build();
-        audioRecord = audioRecordBuilder.setAudioFormat(newAudioFormat)
+        audioRecord = audioRecordBuilder.setAudioFormat(audioFormat)
                 .setBufferSizeInBytes(4 * minBufferSize)
                 .setAudioPlaybackCaptureConfig(apcc)
                 .build();
@@ -189,29 +205,29 @@ public class RecorderThread implements Runnable {
                 try {
                     audioRecord.startRecording();
                 } catch (Exception e) {
-                    asyncError = true;
+                    hasAsyncError = true;
                     e.printStackTrace();
                     return;
                 }
                 try {
                     while (!audioStopped) {
                         int index = audioEncoder.dequeueInputBuffer(
-                                RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
+                                RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT_MS);
                         if (index < 0) {
                             continue;
                         }
                         ByteBuffer inputBuffer = audioEncoder.getInputBuffer(index);
                         if (inputBuffer == null) {
                             if (!stopped) {
-                                asyncError = true;
+                                hasAsyncError = true;
                             }
                             return;
                         }
                         inputBuffer.clear();
                         int read = audioRecord.read(inputBuffer, inputBuffer.capacity());
-                        if (read < 0) {
+                        if (read <= 0) {
                             if (!stopped) {
-                                asyncError = true;
+                                hasAsyncError = true;
                             }
                             break;
                         }
@@ -221,7 +237,7 @@ public class RecorderThread implements Runnable {
                 } catch (Exception e) {
                     if (!stopped) {
                         Log.e(TAG, "Audio error", e);
-                        asyncError = true;
+                        hasAsyncError = true;
                         e.printStackTrace();
                     }
                 } finally {
@@ -237,10 +253,10 @@ public class RecorderThread implements Runnable {
     private long getPresentationTimeUs() {
         if (!startTimestampInitialized) {
             startTimestampUs =
-                    System.nanoTime() / RecorderConstant.ENCODER_PRESENTATION_TIME_DEFAULT_DIVIDER;
+                    System.nanoTime() / RecorderConstant.NANOSECOND_TO_MICROSECOND;
             startTimestampInitialized = true;
         }
-        return (System.nanoTime() / RecorderConstant.ENCODER_PRESENTATION_TIME_DEFAULT_DIVIDER
+        return (System.nanoTime() / RecorderConstant.NANOSECOND_TO_MICROSECOND
                         - startTimestampUs);
     }
 
@@ -265,7 +281,7 @@ public class RecorderThread implements Runnable {
         encoderStatus = audioEncoder.dequeueOutputBuffer(this.bufferInfo, 0);
         if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
             if (audioTrackIndex > 0) {
-                Log.e(TAG, "audioTrackIndex less than zero");
+                Log.e(TAG, "audioTrackIndex greater than zero");
                 return false;
             }
             audioTrackIndex = muxer.addTrack(audioEncoder.getOutputFormat());
@@ -302,10 +318,10 @@ public class RecorderThread implements Runnable {
         int encoderStatus;
 
         encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo,
-                RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT);
+                RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT_MS);
         if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
             if (videoTrackIndex > 0) {
-                Log.e(TAG, "videoTrackIndex less than zero");
+                Log.e(TAG, "videoTrackIndex greater than zero");
                 return false;
             }
             videoTrackIndex = muxer.addTrack(videoEncoder.getOutputFormat());
@@ -341,7 +357,7 @@ public class RecorderThread implements Runnable {
     public void run() {
         try {
             setupVideoCodec();
-            setupVirtualDisplay();
+            virtualDisplay = setupVirtualDisplay();
 
             setupAudioCodec();
             setupAudioRecord();
@@ -349,18 +365,16 @@ public class RecorderThread implements Runnable {
             muxer = new MediaMuxer(this.outputFilePath,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
 
-            // set output file orientation info if it is in landscape mode (default is 0==portrait)
+            // set output file orientation info
             // note: this method must be run before muxer.start()
-            if (isRotated) {
-                muxer.setOrientationHint(90);
-            }
+            muxer.setOrientationHint(recordingRotation);
 
             startAudioRecord();
 
             bufferInfo = new MediaCodec.BufferInfo();
             lastAudioTimestampUs = -1;
 
-            while (!stopped && !asyncError) {
+            while (!stopped && !hasAsyncError) {
                 if (!writeAudioBufferToFile()) {
                     break;
                 }
