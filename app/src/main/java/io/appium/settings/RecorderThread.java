@@ -101,7 +101,7 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    private MediaFormat setupVideoEncoderFormat(String videoMime, int videoWidth,
+    private MediaFormat initVideoEncoderFormat(String videoMime, int videoWidth,
                                                 int videoHeight, int videoBitrate) {
         MediaFormat encoderFormat = MediaFormat.createVideoFormat(videoMime, videoWidth,
                 videoHeight);
@@ -118,7 +118,7 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private VirtualDisplay setupVirtualDisplay(MediaProjection mediaProjection,
+    private VirtualDisplay initVirtualDisplay(MediaProjection mediaProjection,
                                                Surface surface, Handler handler,
                                                int videoWidth, int videoHeight) {
         return mediaProjection.createVirtualDisplay("Appium Screen Recorder",
@@ -128,7 +128,7 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private MediaCodec setupAudioCodec(int sampleRate) throws IOException {
+    private MediaCodec initAudioCodec(int sampleRate) throws IOException {
         // Encoded video resolution matches virtual display. TODO set channelCount 2 try stereo quality
         MediaFormat encoderFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC,
                 sampleRate, RecorderConstant.AUDIO_CODEC_CHANNEL_COUNT);
@@ -142,7 +142,7 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
-    private AudioRecord setupAudioRecord(int sampleRate) {
+    private AudioRecord initAudioRecord(MediaProjection mediaProjection, int sampleRate) {
         int channelConfig = AudioFormat.CHANNEL_IN_MONO;
         int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig,
                 AudioFormat.ENCODING_PCM_16BIT);
@@ -155,7 +155,7 @@ public class RecorderThread implements Runnable {
 
         AudioRecord.Builder audioRecordBuilder = new AudioRecord.Builder();
         AudioPlaybackCaptureConfiguration apcc =
-                new AudioPlaybackCaptureConfiguration.Builder(this.mediaProjection)
+                new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
                         .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
                         .build();
         return audioRecordBuilder.setAudioFormat(audioFormat)
@@ -345,7 +345,7 @@ public class RecorderThread implements Runnable {
                     videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
             int videoBitrate = calcBitRate(videoWidth, videoHeight);
 
-            MediaFormat videoEncoderFormat = setupVideoEncoderFormat(videoMime,
+            MediaFormat videoEncoderFormat = initVideoEncoderFormat(videoMime,
                     finalVideoWidth, finalVideoHeight, videoBitrate);
 
             videoEncoder.configure(videoEncoderFormat, null, null,
@@ -354,14 +354,14 @@ public class RecorderThread implements Runnable {
             videoEncoder.start();
 
             Handler handler = new Handler();
-            virtualDisplay = setupVirtualDisplay(this.mediaProjection, surface, handler,
+            virtualDisplay = initVirtualDisplay(this.mediaProjection, surface, handler,
                     finalVideoWidth, finalVideoHeight);
 
             int sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE_HZ;
-            audioEncoder = setupAudioCodec(sampleRate);
+            audioEncoder = initAudioCodec(sampleRate);
             audioEncoder.start();
 
-            audioRecord = setupAudioRecord(sampleRate);
+            audioRecord = initAudioRecord(this.mediaProjection, sampleRate);
 
             muxer = new MediaMuxer(this.outputFilePath,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
