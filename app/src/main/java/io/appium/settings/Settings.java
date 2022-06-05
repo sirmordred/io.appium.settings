@@ -124,12 +124,13 @@ public class Settings extends Activity {
 
         String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
 
-        if (recordingFilename == null || recordingFilename.isEmpty()
-                || !recordingFilename.endsWith(".mp4")) {
+        if (isValidFileName(recordingFilename)) {
             String timeStamp = new SimpleDateFormat(
                     "yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date());
             recordingFilename = RecorderConstant.DEFAULT_RECORDING_FILENAME +
                     "_" + timeStamp + ".mp4";
+            Log.w(TAG, "handleRecording: Invalid filename passed by user," +
+                    " using default one: " + recordingFilename);
         }
 
         recordingOutputPath = getExternalFilesDir(null).getAbsolutePath()
@@ -185,6 +186,40 @@ public class Settings extends Activity {
         } else {
             Log.e(TAG, "handleRecording: Unknown recording intent.action");
             finishActivity();
+        }
+    }
+
+    private static boolean isValidFileName(String filename) {
+        if (filename == null || filename.isEmpty() || !filename.endsWith(".mp4")) {
+            return false;
+        }
+        if (filename.length() >= 255) {
+            return false;
+        }
+        for (char c : filename.toCharArray()) {
+            if (!isValidFilenameChar(c)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // taken from https://android.googlesource.com/platform/frameworks/base/+/refs/heads/master/core/java/android/os/FileUtils.java#995
+    private static boolean isValidFilenameChar(char c) {
+        switch (c) {
+            case '"':
+            case '*':
+            case '/':
+            case ':':
+            case '<':
+            case '>':
+            case '?':
+            case '\\':
+            case '|':
+            case '\0':
+                return false;
+            default:
+                return true;
         }
     }
 
