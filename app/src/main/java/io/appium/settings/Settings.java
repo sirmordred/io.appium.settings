@@ -53,6 +53,13 @@ import io.appium.settings.receivers.SmsReader;
 import io.appium.settings.receivers.UnpairBluetoothDevicesReceiver;
 import io.appium.settings.receivers.WiFiConnectionSettingReceiver;
 
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_ROTATION;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_START;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_STOP;
+import static io.appium.settings.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
+
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";
 
@@ -115,8 +122,7 @@ public class Settings extends Activity {
             return;
         }
 
-        String recordingFilename = intent.getStringExtra(
-                RecorderService.ACTION_RECORDING_FILENAME);
+        String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
 
         if (recordingFilename == null || recordingFilename.isEmpty()
                 || !recordingFilename.endsWith(".mp4")) {
@@ -154,7 +160,7 @@ public class Settings extends Activity {
             }
         }
 
-        if (recordingAction.equals(RecorderService.ACTION_RECORDING_START)) {
+        if (recordingAction.equals(ACTION_RECORDING_START)) {
             // start record
             final MediaProjectionManager manager
                     = (MediaProjectionManager) getSystemService(
@@ -168,12 +174,11 @@ public class Settings extends Activity {
 
             final Intent permissionIntent = manager.createScreenCaptureIntent();
 
-            startActivityForResult(permissionIntent,
-                    RecorderService.REQUEST_CODE_SCREEN_CAPTURE);
-        } else if (recordingAction.equals(RecorderService.ACTION_RECORDING_STOP)) {
+            startActivityForResult(permissionIntent, REQUEST_CODE_SCREEN_CAPTURE);
+        } else if (recordingAction.equals(ACTION_RECORDING_STOP)) {
             // stop record
             final Intent recorderIntent = new Intent(this, RecorderService.class);
-            recorderIntent.setAction(RecorderService.ACTION_RECORDING_STOP);
+            recorderIntent.setAction(ACTION_RECORDING_STOP);
             startService(recorderIntent);
 
             finishActivity();
@@ -208,7 +213,7 @@ public class Settings extends Activity {
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data)
     {
         super.onActivityResult(requestCode, resultCode, data);
-        if (RecorderService.REQUEST_CODE_SCREEN_CAPTURE != requestCode) {
+        if (REQUEST_CODE_SCREEN_CAPTURE != requestCode) {
             Log.e(TAG, "handleRecording: onActivityResult: Unknown request code");
             finishActivity();
             return;
@@ -223,10 +228,10 @@ public class Settings extends Activity {
         }
 
         final Intent intent = new Intent(this, RecorderService.class);
-        intent.setAction(RecorderService.ACTION_RECORDING_START);
-        intent.putExtra(RecorderService.ACTION_RECORDING_RESULT_CODE, resultCode);
-        intent.putExtra(RecorderService.ACTION_RECORDING_FILENAME, recordingOutputPath);
-        intent.putExtra(RecorderService.ACTION_RECORDING_ROTATION, recordingRotation);
+        intent.setAction(ACTION_RECORDING_START);
+        intent.putExtra(ACTION_RECORDING_RESULT_CODE, resultCode);
+        intent.putExtra(ACTION_RECORDING_FILENAME, recordingOutputPath);
+        intent.putExtra(ACTION_RECORDING_ROTATION, recordingRotation);
         intent.putExtras(data);
 
         startService(intent);

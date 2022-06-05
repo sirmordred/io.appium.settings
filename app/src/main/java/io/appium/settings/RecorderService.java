@@ -30,16 +30,14 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import io.appium.settings.helpers.NotificationHelpers;
 
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_ROTATION;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_START;
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_STOP;
+
 public class RecorderService extends Service {
     private static final String TAG = "RecorderService";
-
-    public static final int REQUEST_CODE_SCREEN_CAPTURE = 123;
-    private static final String PACKAGE_NAME = BuildConfig.APPLICATION_ID;
-    public static final String ACTION_RECORDING_START = PACKAGE_NAME + ".recording.ACTION_START";
-    public static final String ACTION_RECORDING_STOP = PACKAGE_NAME + ".recording.ACTION_STOP";
-    public static final String ACTION_RECORDING_RESULT_CODE = "result_code";
-    public static final String ACTION_RECORDING_FILENAME = "recording_filename";
-    public static final String ACTION_RECORDING_ROTATION = "recording_rotation";
 
     private static RecorderThread recorderThread;
 
