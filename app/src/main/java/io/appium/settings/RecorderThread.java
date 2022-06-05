@@ -38,6 +38,8 @@ import java.nio.ByteBuffer;
 
 import androidx.annotation.RequiresApi;
 
+import static io.appium.settings.RecorderConstant.NO_TIMESTAMP_SET;
+
 public class RecorderThread implements Runnable {
 
     private static final String TAG = "RecorderThread";
@@ -51,7 +53,7 @@ public class RecorderThread implements Runnable {
     private boolean muxerStarted;
     private boolean isStartTimestampInitialized = false;
     private long startTimestampUs;
-    private long lastAudioTimestampUs = -1;
+    private long lastAudioTimestampUs = NO_TIMESTAMP_SET;
 
     private int videoTrackIndex = -1;
     private int audioTrackIndex = -1;
@@ -374,7 +376,7 @@ public class RecorderThread implements Runnable {
             audioRecordThread.start();
 
             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-            lastAudioTimestampUs = -1;
+            lastAudioTimestampUs = NO_TIMESTAMP_SET;
 
             while (!stopped && !hasAsyncError) {
                 if (!writeAudioBufferToFile(audioEncoder, muxer, bufferInfo)) {

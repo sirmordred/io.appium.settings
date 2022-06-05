@@ -103,7 +103,7 @@ public class Settings extends Activity {
             return;
         }
 
-        if (!isHigherThanP()) {
+        if (isLowerThanQ()) {
             Log.e(TAG, "handleRecording: Current Android OS Version is lower than Q");
             finishActivity();
             return;
@@ -200,8 +200,8 @@ public class Settings extends Activity {
                 && permissionAudio == PackageManager.PERMISSION_GRANTED;
     }
 
-    private boolean isHigherThanP() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
+    private boolean isLowerThanQ() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q;
     }
 
     @Override

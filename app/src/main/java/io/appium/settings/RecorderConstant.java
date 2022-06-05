@@ -27,4 +27,5 @@ public class RecorderConstant {
     public static final int VIDEO_CODEC_FRAME_RATE = 30;
     public static final long MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT_MS = 10000;
     public static final long NANOSECOND_TO_MICROSECOND = 1000;
+    public static final long NO_TIMESTAMP_SET = -1;
 }
