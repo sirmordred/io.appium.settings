@@ -43,35 +43,22 @@ public class RecorderThread implements Runnable {
     private static final String TAG = "RecorderThread";
 
     private final MediaProjection mediaProjection;
-    private VirtualDisplay virtualDisplay;
-    private Surface surface;
-    private MediaCodec audioEncoder;
-    private MediaCodec videoEncoder;
-    private AudioRecord audioRecord;
-    private MediaMuxer muxer;
+    private final String outputFilePath;
+    private final int videoWidth;
+    private final int videoHeight;
+    private final int recordingRotation;
+
     private boolean muxerStarted;
     private boolean isStartTimestampInitialized = false;
     private long startTimestampUs;
-    private final Handler handler;
-    private Thread audioRecordThread;
+    private long lastAudioTimestampUs = -1;
 
     private int videoTrackIndex = -1;
     private int audioTrackIndex = -1;
 
-
-    private final String outputFilePath;
-    private final String videoMime;
-    private int videoWidth;
-    private int videoHeight;
-    private final int sampleRate;
-    private final int recordingRotation;
-
     private volatile boolean stopped = false;
     private volatile boolean audioStopped;
     private volatile boolean hasAsyncError = false;
-
-    private MediaCodec.BufferInfo bufferInfo;
-    private long lastAudioTimestampUs = -1;
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private final VirtualDisplay.Callback displayCallback = new VirtualDisplay.Callback() {
@@ -93,14 +80,10 @@ public class RecorderThread implements Runnable {
     public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
                           int videoWidth, int videoHeight, int recordingRotation) {
         this.mediaProjection = mediaProjection;
-        handler = new Handler();
         this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
-        this.sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE_HZ;
         this.recordingRotation = recordingRotation;
-        videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
-        bufferInfo = new MediaCodec.BufferInfo();
     }
 
     public void startRecording() {
@@ -117,20 +100,9 @@ public class RecorderThread implements Runnable {
         return !stopped;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void setupVideoCodec() throws IOException {
-        // Encoded video resolution MUST match virtual display.
-        videoEncoder = MediaCodec.createEncoderByType(videoMime);
-
-        /* Clamp raw width/height of device screen with video encoder's capabilities
-        *  to avoid crash.
-        * */
-        MediaCodecInfo.VideoCapabilities videoEncoderCapabilities = videoEncoder.getCodecInfo().
-                getCapabilitiesForType(videoMime).getVideoCapabilities();
-        this.videoWidth = videoEncoderCapabilities.getSupportedWidths().clamp(this.videoWidth);
-        this.videoHeight = videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
-        int videoBitrate = calcBitRate(videoWidth, videoHeight);
-
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    private MediaFormat setupVideoEncoderFormat(String videoMime, int videoWidth,
+                                                int videoHeight, int videoBitrate) {
         MediaFormat encoderFormat = MediaFormat.createVideoFormat(videoMime, videoWidth,
                 videoHeight);
         encoderFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,
@@ -142,36 +114,35 @@ public class RecorderThread implements Runnable {
                 RecorderConstant.AUDIO_CODEC_REPEAT_PREV_FRAME_AFTER_MS);
         encoderFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,
                 RecorderConstant.AUDIO_CODEC_I_FRAME_INTERVAL_MS);
-
-        videoEncoder.configure(encoderFormat, null, null,
-                MediaCodec.CONFIGURE_FLAG_ENCODE);
-        surface = videoEncoder.createInputSurface();
-        videoEncoder.start();
+        return encoderFormat;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private VirtualDisplay setupVirtualDisplay() {
+    private VirtualDisplay setupVirtualDisplay(MediaProjection mediaProjection,
+                                               Surface surface, Handler handler,
+                                               int videoWidth, int videoHeight) {
         return mediaProjection.createVirtualDisplay("Appium Screen Recorder",
                 videoWidth, videoHeight, DisplayMetrics.DENSITY_HIGH,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 surface, displayCallback, handler);
     }
 
-    private void setupAudioCodec() throws IOException {
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private MediaCodec setupAudioCodec(int sampleRate) throws IOException {
         // Encoded video resolution matches virtual display. TODO set channelCount 2 try stereo quality
         MediaFormat encoderFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC,
                 sampleRate, RecorderConstant.AUDIO_CODEC_CHANNEL_COUNT);
         encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE,
                 RecorderConstant.AUDIO_CODEC_DEFAULT_BITRATE);
 
-        audioEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
+        MediaCodec audioEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
         audioEncoder.configure(encoderFormat, null, null,
                 MediaCodec.CONFIGURE_FLAG_ENCODE);
-        audioEncoder.start();
+        return audioEncoder;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
-    private void setupAudioRecord() {
+    private AudioRecord setupAudioRecord(int sampleRate) {
         int channelConfig = AudioFormat.CHANNEL_IN_MONO;
         int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig,
                 AudioFormat.ENCODING_PCM_16BIT);
@@ -187,15 +158,15 @@ public class RecorderThread implements Runnable {
                 new AudioPlaybackCaptureConfiguration.Builder(this.mediaProjection)
                         .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
                         .build();
-        audioRecord = audioRecordBuilder.setAudioFormat(audioFormat)
+        return audioRecordBuilder.setAudioFormat(audioFormat)
                 .setBufferSizeInBytes(4 * minBufferSize)
                 .setAudioPlaybackCaptureConfig(apcc)
                 .build();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void startAudioRecord() {
-        audioRecordThread = new Thread(new Runnable() {
+    private Thread startAudioRecord(MediaCodec audioEncoder, final AudioRecord audioRecord) {
+        return new Thread(new Runnable() {
             @Override
             public void run() {
                 Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
@@ -240,11 +211,9 @@ public class RecorderThread implements Runnable {
                 } finally {
                     audioRecord.stop();
                     audioRecord.release();
-                    audioRecord = null;
                 }
             }
         });
-        audioRecordThread.start();
     }
 
     private long getPresentationTimeUs() {
@@ -264,7 +233,7 @@ public class RecorderThread implements Runnable {
         return bitrate;
     }
 
-    private void startMuxerIfSetUp() {
+    private void startMuxerIfSetUp(MediaMuxer muxer) {
         if (audioTrackIndex >= 0 && videoTrackIndex >= 0) {
             muxer.start();
             muxerStarted = true;
@@ -272,17 +241,18 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private boolean writeAudioBufferToFile() {
+    private boolean writeAudioBufferToFile(MediaCodec audioEncoder, MediaMuxer muxer,
+                                           MediaCodec.BufferInfo bufferInfo) {
         int encoderStatus;
 
-        encoderStatus = audioEncoder.dequeueOutputBuffer(this.bufferInfo, 0);
+        encoderStatus = audioEncoder.dequeueOutputBuffer(bufferInfo, 0);
         if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
             if (audioTrackIndex > 0) {
                 Log.e(TAG, "audioTrackIndex greater than zero");
                 return false;
             }
             audioTrackIndex = muxer.addTrack(audioEncoder.getOutputFormat());
-            startMuxerIfSetUp();
+            startMuxerIfSetUp(muxer);
         } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
             Log.w(TAG, "unexpected result from audio encoder.dequeueOutputBuffer: "
                     + encoderStatus);
@@ -293,16 +263,16 @@ public class RecorderThread implements Runnable {
                 return false;
             }
 
-            if (this.bufferInfo.presentationTimeUs > this.lastAudioTimestampUs
-                    && muxerStarted && this.bufferInfo.size != 0 &&
-                    (this.bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
-                this.lastAudioTimestampUs = this.bufferInfo.presentationTimeUs;
-                muxer.writeSampleData(audioTrackIndex, encodedData, this.bufferInfo);
+            if (bufferInfo.presentationTimeUs > this.lastAudioTimestampUs
+                    && muxerStarted && bufferInfo.size != 0 &&
+                    (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                this.lastAudioTimestampUs = bufferInfo.presentationTimeUs;
+                muxer.writeSampleData(audioTrackIndex, encodedData, bufferInfo);
             }
 
             audioEncoder.releaseOutputBuffer(encoderStatus, false);
 
-            if ((this.bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+            if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                 Log.v(TAG, "buffer eos");
                 return false;
             }
@@ -311,7 +281,8 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private boolean writeVideoBufferToFile() {
+    private boolean writeVideoBufferToFile(MediaCodec videoEncoder, MediaMuxer muxer,
+                                           MediaCodec.BufferInfo bufferInfo) {
         int encoderStatus;
 
         encoderStatus = videoEncoder.dequeueOutputBuffer(bufferInfo,
@@ -322,7 +293,7 @@ public class RecorderThread implements Runnable {
                 return false;
             }
             videoTrackIndex = muxer.addTrack(videoEncoder.getOutputFormat());
-            startMuxerIfSetUp();
+            startMuxerIfSetUp(muxer);
         } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
             Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: "
                     + encoderStatus);
@@ -352,12 +323,45 @@ public class RecorderThread implements Runnable {
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public void run() {
+        VirtualDisplay virtualDisplay = null;
+        MediaCodec videoEncoder = null;
+        MediaCodec audioEncoder = null;
+        Surface surface = null;
+        AudioRecord audioRecord = null;
+        Thread audioRecordThread = null;
+        MediaMuxer muxer = null;
         try {
-            setupVideoCodec();
-            virtualDisplay = setupVirtualDisplay();
+            String videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
+            videoEncoder = MediaCodec.createEncoderByType(videoMime);
 
-            setupAudioCodec();
-            setupAudioRecord();
+            /* Clamp raw width/height of device screen with video encoder's capabilities
+             *  to avoid crash.
+             * */
+            MediaCodecInfo.VideoCapabilities videoEncoderCapabilities = videoEncoder.getCodecInfo().
+                    getCapabilitiesForType(videoMime).getVideoCapabilities();
+            int finalVideoWidth =
+                    videoEncoderCapabilities.getSupportedWidths().clamp(this.videoWidth);
+            int finalVideoHeight =
+                    videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
+            int videoBitrate = calcBitRate(videoWidth, videoHeight);
+
+            MediaFormat videoEncoderFormat = setupVideoEncoderFormat(videoMime,
+                    finalVideoWidth, finalVideoHeight, videoBitrate);
+
+            videoEncoder.configure(videoEncoderFormat, null, null,
+                    MediaCodec.CONFIGURE_FLAG_ENCODE);
+            surface = videoEncoder.createInputSurface();
+            videoEncoder.start();
+
+            Handler handler = new Handler();
+            virtualDisplay = setupVirtualDisplay(this.mediaProjection, surface, handler,
+                    finalVideoWidth, finalVideoHeight);
+
+            int sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE_HZ;
+            audioEncoder = setupAudioCodec(sampleRate);
+            audioEncoder.start();
+
+            audioRecord = setupAudioRecord(sampleRate);
 
             muxer = new MediaMuxer(this.outputFilePath,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
@@ -366,13 +370,14 @@ public class RecorderThread implements Runnable {
             // note: this method must be run before muxer.start()
             muxer.setOrientationHint(recordingRotation);
 
-            startAudioRecord();
+            audioRecordThread = startAudioRecord(audioEncoder, audioRecord);
+            audioRecordThread.start();
 
-            bufferInfo = new MediaCodec.BufferInfo();
+            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
             lastAudioTimestampUs = -1;
 
             while (!stopped && !hasAsyncError) {
-                if (!writeAudioBufferToFile()) {
+                if (!writeAudioBufferToFile(audioEncoder, muxer, bufferInfo)) {
                     break;
                 }
 
@@ -380,7 +385,7 @@ public class RecorderThread implements Runnable {
                     continue; // wait for audio config before processing any video data frames
                 }
 
-                if (!writeVideoBufferToFile()) {
+                if (!writeVideoBufferToFile(videoEncoder, muxer, bufferInfo)) {
                     break;
                 }
             }
