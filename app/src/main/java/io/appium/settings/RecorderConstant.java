@@ -18,9 +18,9 @@ package io.appium.settings;
 
 public class RecorderConstant {
     public static final int REQUEST_CODE_SCREEN_CAPTURE = 123;
-    private static final String PACKAGE_NAME = BuildConfig.APPLICATION_ID;
-    public static final String ACTION_RECORDING_START = PACKAGE_NAME + ".recording.ACTION_START";
-    public static final String ACTION_RECORDING_STOP = PACKAGE_NAME + ".recording.ACTION_STOP";
+    public static final String ACTION_RECORDING_BASE = BuildConfig.APPLICATION_ID + ".recording";
+    public static final String ACTION_RECORDING_START = ACTION_RECORDING_BASE + ".ACTION_START";
+    public static final String ACTION_RECORDING_STOP = ACTION_RECORDING_BASE + ".ACTION_STOP";
     public static final String ACTION_RECORDING_RESULT_CODE = "result_code";
     public static final String ACTION_RECORDING_FILENAME = "recording_filename";
     public static final String ACTION_RECORDING_ROTATION = "recording_rotation";

@@ -32,7 +32,6 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
 
-import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -53,6 +52,7 @@ import io.appium.settings.receivers.SmsReader;
 import io.appium.settings.receivers.UnpairBluetoothDevicesReceiver;
 import io.appium.settings.receivers.WiFiConnectionSettingReceiver;
 
+import static io.appium.settings.RecorderConstant.ACTION_RECORDING_BASE;
 import static io.appium.settings.RecorderConstant.ACTION_RECORDING_FILENAME;
 import static io.appium.settings.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.RecorderConstant.ACTION_RECORDING_ROTATION;
@@ -63,7 +63,7 @@ import static io.appium.settings.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";
 
-    private String recordingOutputPath = "";
+    private String recordingFilename = RecorderConstant.DEFAULT_RECORDING_FILENAME;
     private int recordingRotation = -1;
 
     @Override
@@ -110,6 +110,12 @@ public class Settings extends Activity {
             return;
         }
 
+        if (!recordingAction.startsWith(ACTION_RECORDING_BASE)) {
+            Log.i(TAG, "handleRecording: Different intent");
+            finishActivity();
+            return;
+        }
+
         if (isLowerThanQ()) {
             Log.e(TAG, "handleRecording: Current Android OS Version is lower than Q");
             finishActivity();
@@ -122,7 +128,7 @@ public class Settings extends Activity {
             return;
         }
 
-        String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
+        recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
 
         if (isValidFileName(recordingFilename)) {
             String timeStamp = new SimpleDateFormat(
@@ -132,9 +138,6 @@ public class Settings extends Activity {
             Log.w(TAG, "handleRecording: Invalid filename passed by user," +
                     " using default one: " + recordingFilename);
         }
-
-        recordingOutputPath = getExternalFilesDir(null).getAbsolutePath()
-                + File.separator + recordingFilename;
 
         Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
 
@@ -184,7 +187,7 @@ public class Settings extends Activity {
 
             finishActivity();
         } else {
-            Log.e(TAG, "handleRecording: Unknown recording intent.action");
+            Log.e(TAG, "handleRecording: Unknown recording intent.action:" + recordingAction);
             finishActivity();
         }
     }
@@ -265,7 +268,7 @@ public class Settings extends Activity {
         final Intent intent = new Intent(this, RecorderService.class);
         intent.setAction(ACTION_RECORDING_START);
         intent.putExtra(ACTION_RECORDING_RESULT_CODE, resultCode);
-        intent.putExtra(ACTION_RECORDING_FILENAME, recordingOutputPath);
+        intent.putExtra(ACTION_RECORDING_FILENAME, recordingFilename);
         intent.putExtra(ACTION_RECORDING_ROTATION, recordingRotation);
         intent.putExtras(data);
 

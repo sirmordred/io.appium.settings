@@ -29,10 +29,12 @@ import android.media.MediaMuxer;
 import android.media.projection.MediaProjection;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -45,7 +47,7 @@ public class RecorderThread implements Runnable {
     private static final String TAG = "RecorderThread";
 
     private final MediaProjection mediaProjection;
-    private final String outputFilePath;
+    private final FileDescriptor outputFileFd;
     private final int videoWidth;
     private final int videoHeight;
     private final int recordingRotation;
@@ -79,10 +81,10 @@ public class RecorderThread implements Runnable {
         }
     };
 
-    public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
+    public RecorderThread(MediaProjection mediaProjection, FileDescriptor outputFileFd,
                           int videoWidth, int videoHeight, int recordingRotation) {
         this.mediaProjection = mediaProjection;
-        this.outputFilePath = outputFilePath;
+        this.outputFileFd = outputFileFd;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
         this.recordingRotation = recordingRotation;
@@ -345,6 +347,15 @@ public class RecorderThread implements Runnable {
                     videoEncoderCapabilities.getSupportedWidths().clamp(this.videoWidth);
             int finalVideoHeight =
                     videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
+
+            if (finalVideoHeight > 1920) {
+                finalVideoHeight = 1920;
+            }
+
+            if (finalVideoWidth > 1080) {
+                finalVideoWidth = 1080;
+            }
+
             int videoBitrate = calcBitRate(videoWidth, videoHeight);
 
             MediaFormat videoEncoderFormat = initVideoEncoderFormat(videoMime,
@@ -355,7 +366,7 @@ public class RecorderThread implements Runnable {
             surface = videoEncoder.createInputSurface();
             videoEncoder.start();
 
-            Handler handler = new Handler();
+            Handler handler = new Handler(Looper.getMainLooper());
             virtualDisplay = initVirtualDisplay(this.mediaProjection, surface, handler,
                     finalVideoWidth, finalVideoHeight);
 
@@ -365,7 +376,7 @@ public class RecorderThread implements Runnable {
 
             audioRecord = initAudioRecord(this.mediaProjection, sampleRate);
 
-            muxer = new MediaMuxer(this.outputFilePath,
+            muxer = new MediaMuxer(this.outputFileFd,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
 
             // set output file orientation info
