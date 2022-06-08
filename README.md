@@ -343,7 +343,7 @@ adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.app
 
 Obtain Recording Output File:
 ```bash
-adb pull /storage/sdcard0/Android/data/io.appium.settings/files/abc.mp4 abc.mp4
+adb pull /storage/emulated/0/Android/data/io.appium.settings/files/abc.mp4 abc.mp4
 ```
 
 
