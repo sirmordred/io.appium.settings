@@ -43,15 +43,17 @@ import io.appium.settings.receivers.NotificationsReceiver;
 import io.appium.settings.receivers.SmsReader;
 import io.appium.settings.receivers.UnpairBluetoothDevicesReceiver;
 import io.appium.settings.receivers.WiFiConnectionSettingReceiver;
+import io.appium.settings.recorder.RecorderService;
+import io.appium.settings.recorder.RecorderUtil;
 
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_BASE;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_FILENAME;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_ROTATION;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_START;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_STOP;
-import static io.appium.settings.RecorderConstant.NO_ROTATION_SET;
-import static io.appium.settings.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_BASE;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
+import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";

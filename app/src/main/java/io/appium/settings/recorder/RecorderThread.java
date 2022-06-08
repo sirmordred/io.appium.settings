@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-package io.appium.settings;
+package io.appium.settings.recorder;
 
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
 
 import androidx.annotation.RequiresApi;
 
-import static io.appium.settings.RecorderConstant.NO_TIMESTAMP_SET;
+import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
 
 public class RecorderThread implements Runnable {
 

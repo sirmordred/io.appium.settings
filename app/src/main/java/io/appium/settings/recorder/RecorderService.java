@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-package io.appium.settings;
+package io.appium.settings.recorder;
 
 import android.app.Service;
 import android.content.Context;
@@ -30,11 +30,11 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import io.appium.settings.helpers.NotificationHelpers;
 
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_FILENAME;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_ROTATION;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_START;
-import static io.appium.settings.RecorderConstant.ACTION_RECORDING_STOP;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
 
 public class RecorderService extends Service {
     private static final String TAG = "RecorderService";

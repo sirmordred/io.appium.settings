@@ -14,7 +14,9 @@
   limitations under the License.
  */
 
-package io.appium.settings;
+package io.appium.settings.recorder;
+
+import io.appium.settings.BuildConfig;
 
 public class RecorderConstant {
     public static final int REQUEST_CODE_SCREEN_CAPTURE = 123;
