@@ -16,27 +16,21 @@
 
 package io.appium.settings;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
-import android.view.Display;
-import android.view.Surface;
-import android.view.WindowManager;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import androidx.core.app.ActivityCompat;
 import io.appium.settings.receivers.AnimationSettingReceiver;
 import io.appium.settings.receivers.BluetoothConnectionSettingReceiver;
 import io.appium.settings.receivers.ClipboardReceiver;
@@ -56,13 +50,14 @@ import static io.appium.settings.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.RecorderConstant.ACTION_RECORDING_STOP;
+import static io.appium.settings.RecorderConstant.NO_ROTATION_SET;
 import static io.appium.settings.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";
 
     private String recordingOutputPath = "";
-    private int recordingRotation = -1;
+    private int recordingRotation = NO_ROTATION_SET;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -114,13 +109,13 @@ public class Settings extends Activity {
             return;
         }
 
-        if (isLowerThanQ()) {
+        if (RecorderUtil.isLowerThanQ()) {
             Log.e(TAG, "handleRecording: Current Android OS Version is lower than Q");
             finishActivity();
             return;
         }
 
-        if (!areRecordingPermissionsGranted()) {
+        if (!RecorderUtil.areRecordingPermissionsGranted(getApplicationContext())) {
             Log.e(TAG, "handleRecording: Required Permissions are not granted");
             finishActivity();
             return;
@@ -128,7 +123,7 @@ public class Settings extends Activity {
 
         String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
 
-        if (isValidFileName(recordingFilename)) {
+        if (RecorderUtil.isValidFileName(recordingFilename)) {
             Log.e(TAG, "handleRecording: Invalid filename passed by user");
             finishActivity();
             return;
@@ -153,30 +148,7 @@ public class Settings extends Activity {
         recordingOutputPath = externalStorageFile.getAbsolutePath()
                 + File.separator + recordingFilename;
 
-        Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
-
-        if (display != null) {
-            int deviceRotation = display.getRotation();
-
-            switch(deviceRotation) {
-                case Surface.ROTATION_0:
-                    // portrait
-                    recordingRotation = 0;
-                    break;
-                case Surface.ROTATION_90:
-                    // landscape left
-                    recordingRotation = 90;
-                    break;
-                case Surface.ROTATION_180:
-                    // flipped portrait
-                    recordingRotation = 180;
-                    break;
-                case Surface.ROTATION_270:
-                    // landscape right
-                    recordingRotation = 270;
-                    break;
-            }
-        }
+        recordingRotation = RecorderUtil.getDeviceRotation(getApplicationContext());
 
         if (recordingAction.equals(ACTION_RECORDING_START)) {
             // start record
@@ -206,59 +178,10 @@ public class Settings extends Activity {
         }
     }
 
-    private static boolean isValidFileName(String filename) {
-        if (filename == null || filename.isEmpty() || !filename.endsWith(".mp4")) {
-            return false;
-        }
-        if (filename.length() >= 255) {
-            return false;
-        }
-        for (char c : filename.toCharArray()) {
-            if (!isValidFilenameChar(c)){
-                return false;
-            }
-        }
-        return true;
-    }
-
-    // taken from https://android.googlesource.com/platform/frameworks/base/+/refs/heads/master/core/java/android/os/FileUtils.java#995
-    private static boolean isValidFilenameChar(char c) {
-        switch (c) {
-            case '"':
-            case '*':
-            case '/':
-            case ':':
-            case '<':
-            case '>':
-            case '?':
-            case '\\':
-            case '|':
-            case '\0':
-                return false;
-            default:
-                return true;
-        }
-    }
-
     private void finishActivity() {
         Log.d(TAG, "Closing the app");
         Handler handler = new Handler();
         handler.postDelayed(Settings.this::finish, 1000);
-    }
-
-    private boolean areRecordingPermissionsGranted() {
-        // Check if we have required permission
-        int permission = ActivityCompat.checkSelfPermission(getApplicationContext(),
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        int permissionAudio = ActivityCompat.checkSelfPermission(getApplicationContext(),
-                Manifest.permission.RECORD_AUDIO);
-
-        return permission == PackageManager.PERMISSION_GRANTED
-                && permissionAudio == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private boolean isLowerThanQ() {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q;
     }
 
     @Override
