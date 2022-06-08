@@ -32,6 +32,7 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -63,7 +64,7 @@ import static io.appium.settings.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";
 
-    private String recordingFilename = RecorderConstant.DEFAULT_RECORDING_FILENAME;
+    private String recordingOutputPath = "";
     private int recordingRotation = -1;
 
     @Override
@@ -128,7 +129,7 @@ public class Settings extends Activity {
             return;
         }
 
-        recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
+        String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
 
         if (isValidFileName(recordingFilename)) {
             String timeStamp = new SimpleDateFormat(
@@ -138,6 +139,25 @@ public class Settings extends Activity {
             Log.w(TAG, "handleRecording: Invalid filename passed by user," +
                     " using default one: " + recordingFilename);
         }
+
+        /*
+        External Storage File Directory for app
+        (i.e /storage/emulated/0/Android/data/io.appium.settings/files) may not be created
+        so we need to call getExternalFilesDir() method twice
+        source:https://www.androidbugfix.com/2021/10/getexternalfilesdirnull-returns-null-in.html
+         */
+        File externalStorageFile = getExternalFilesDir(null);
+        if (externalStorageFile == null) {
+            externalStorageFile = getExternalFilesDir(null);
+        }
+        // if path is still null despite calling method twice, early exit
+        if (externalStorageFile == null) {
+            Log.e(TAG, "handleRecording: external storage file path returns null");
+            finishActivity();
+            return;
+        }
+        recordingOutputPath = externalStorageFile.getAbsolutePath()
+                + File.separator + recordingFilename;
 
         Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
 
@@ -268,7 +288,7 @@ public class Settings extends Activity {
         final Intent intent = new Intent(this, RecorderService.class);
         intent.setAction(ACTION_RECORDING_START);
         intent.putExtra(ACTION_RECORDING_RESULT_CODE, resultCode);
-        intent.putExtra(ACTION_RECORDING_FILENAME, recordingFilename);
+        intent.putExtra(ACTION_RECORDING_FILENAME, recordingOutputPath);
         intent.putExtra(ACTION_RECORDING_ROTATION, recordingRotation);
         intent.putExtras(data);
 

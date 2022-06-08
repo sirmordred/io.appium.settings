@@ -34,7 +34,6 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 
-import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -47,7 +46,7 @@ public class RecorderThread implements Runnable {
     private static final String TAG = "RecorderThread";
 
     private final MediaProjection mediaProjection;
-    private final FileDescriptor outputFileFd;
+    private final String outputFilePath;
     private final int videoWidth;
     private final int videoHeight;
     private final int recordingRotation;
@@ -81,10 +80,10 @@ public class RecorderThread implements Runnable {
         }
     };
 
-    public RecorderThread(MediaProjection mediaProjection, FileDescriptor outputFileFd,
+    public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
                           int videoWidth, int videoHeight, int recordingRotation) {
         this.mediaProjection = mediaProjection;
-        this.outputFileFd = outputFileFd;
+        this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
         this.recordingRotation = recordingRotation;
@@ -376,7 +375,7 @@ public class RecorderThread implements Runnable {
 
             audioRecord = initAudioRecord(this.mediaProjection, sampleRate);
 
-            muxer = new MediaMuxer(this.outputFileFd,
+            muxer = new MediaMuxer(this.outputFilePath,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
 
             // set output file orientation info

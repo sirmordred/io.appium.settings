@@ -17,21 +17,14 @@
 package io.appium.settings;
 
 import android.app.Service;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
-import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
-
-import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -124,16 +117,9 @@ public class RecorderService extends Service {
             return;
         }
 
-        String outputFileName = intent.getStringExtra(ACTION_RECORDING_FILENAME);
-        if (outputFileName == null) {
-            Log.i(TAG, "outputFileName is null");
-            return;
-        }
-
-        FileDescriptor outputVideoFd =
-                createOutputVideoDescriptor(getApplicationContext(), outputFileName);
-        if (outputVideoFd == null) {
-            Log.i(TAG, "outputVideoFd is null");
+        String outputFilePath = intent.getStringExtra(ACTION_RECORDING_FILENAME);
+        if (outputFilePath == null) {
+            Log.i(TAG, "outputFilePath is null");
             return;
         }
 
@@ -167,7 +153,7 @@ public class RecorderService extends Service {
                     metrics.widthPixels, metrics.heightPixels, rawWidth, rawHeight));
         }
 
-        recorderThread = new RecorderThread(projection, outputVideoFd,
+        recorderThread = new RecorderThread(projection, outputFilePath,
                 rawWidth, rawHeight, recordingRotation);
         recorderThread.startRecording();
     }
@@ -187,22 +173,5 @@ public class RecorderService extends Service {
         // Set the info for the views that show in the notification panel.
         startForeground(NotificationHelpers.APPIUM_NOTIFICATION_IDENTIFIER,
                 NotificationHelpers.getNotification(this));
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.Q)
-    public FileDescriptor createOutputVideoDescriptor(Context context, String videoFileName) {
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.Video.Media.TITLE, videoFileName);
-        values.put(MediaStore.Video.Media.DISPLAY_NAME, videoFileName);
-        values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
-        ContentResolver resolver = context.getContentResolver();
-        Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
-        Uri videoOutputUri = resolver.insert(collection, values);
-        try {
-            return resolver.openFileDescriptor(videoOutputUri, "rw").getFileDescriptor();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 }
