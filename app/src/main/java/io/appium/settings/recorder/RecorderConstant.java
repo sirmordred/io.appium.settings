@@ -37,4 +37,5 @@ public class RecorderConstant {
     public static final long NANOSECOND_TO_MICROSECOND = 1000;
     public static final long NO_TIMESTAMP_SET = -1;
     public static final int NO_ROTATION_SET = -1;
+    public static final int NO_TRACK_INDEX_SET = -1;
 }

@@ -39,7 +39,9 @@ import java.nio.ByteBuffer;
 
 import androidx.annotation.RequiresApi;
 
+import static io.appium.settings.recorder.RecorderConstant.NANOSECOND_TO_MICROSECOND;
 import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
+import static io.appium.settings.recorder.RecorderConstant.NO_TRACK_INDEX_SET;
 
 public class RecorderThread implements Runnable {
 
@@ -51,16 +53,16 @@ public class RecorderThread implements Runnable {
     private final int videoHeight;
     private final int recordingRotation;
 
-    private boolean muxerStarted;
+    private boolean muxerStarted = false;
     private boolean isStartTimestampInitialized = false;
-    private long startTimestampUs;
+    private long startTimestampUs = System.nanoTime() / NANOSECOND_TO_MICROSECOND;
     private long lastAudioTimestampUs = NO_TIMESTAMP_SET;
 
-    private int videoTrackIndex = -1;
-    private int audioTrackIndex = -1;
+    private int videoTrackIndex = NO_TRACK_INDEX_SET;
+    private int audioTrackIndex = NO_TRACK_INDEX_SET;
 
     private volatile boolean stopped = false;
-    private volatile boolean audioStopped;
+    private volatile boolean audioStopped = false;
     private volatile boolean hasAsyncError = false;
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -168,7 +170,7 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private Thread startAudioRecord(MediaCodec audioEncoder, final AudioRecord audioRecord) {
+    private Thread initAudioRecordThread(MediaCodec audioEncoder, final AudioRecord audioRecord) {
         return new Thread(new Runnable() {
             @Override
             public void run() {
@@ -382,7 +384,7 @@ public class RecorderThread implements Runnable {
             // note: this method must be run before muxer.start()
             muxer.setOrientationHint(recordingRotation);
 
-            audioRecordThread = startAudioRecord(audioEncoder, audioRecord);
+            audioRecordThread = initAudioRecordThread(audioEncoder, audioRecord);
             audioRecordThread.start();
 
             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
@@ -433,7 +435,6 @@ public class RecorderThread implements Runnable {
                     audioRecordThread = null;
                 } catch (InterruptedException e) {
                     Log.w(TAG, "Error releasing resources, audioRecordThread: ", e);
-                    e.printStackTrace();
                 }
             }
 
