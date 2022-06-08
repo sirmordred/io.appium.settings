@@ -33,11 +33,8 @@ import android.view.Surface;
 import android.view.WindowManager;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import androidx.core.app.ActivityCompat;
 import io.appium.settings.receivers.AnimationSettingReceiver;
@@ -132,12 +129,9 @@ public class Settings extends Activity {
         String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
 
         if (isValidFileName(recordingFilename)) {
-            String timeStamp = new SimpleDateFormat(
-                    "yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date());
-            recordingFilename = RecorderConstant.DEFAULT_RECORDING_FILENAME +
-                    "_" + timeStamp + ".mp4";
-            Log.w(TAG, "handleRecording: Invalid filename passed by user," +
-                    " using default one: " + recordingFilename);
+            Log.e(TAG, "handleRecording: Invalid filename passed by user");
+            finishActivity();
+            return;
         }
 
         /*

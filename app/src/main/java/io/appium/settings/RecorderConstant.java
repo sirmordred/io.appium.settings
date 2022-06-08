@@ -24,7 +24,6 @@ public class RecorderConstant {
     public static final String ACTION_RECORDING_RESULT_CODE = "result_code";
     public static final String ACTION_RECORDING_FILENAME = "recording_filename";
     public static final String ACTION_RECORDING_ROTATION = "recording_rotation";
-    public static final String DEFAULT_RECORDING_FILENAME = "AppiumScreenRecord";
     public static final float BITRATE_MULTIPLIER = 0.25f;
     public static final int AUDIO_CODEC_SAMPLE_RATE_HZ = 44100;
     public static final int AUDIO_CODEC_CHANNEL_COUNT = 1;
