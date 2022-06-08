@@ -123,13 +123,14 @@ public class Settings extends Activity {
             return;
         }
 
-        String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
-
-        if (RecorderUtil.isValidFileName(recordingFilename)) {
-            Log.e(TAG, "handleRecording: Invalid filename passed by user");
-            finishActivity();
-            return;
-        }
+        if (recordingAction.equals(ACTION_RECORDING_START)) {
+            String recordingFilename = intent.getStringExtra(ACTION_RECORDING_FILENAME);
+            if (!RecorderUtil.isValidFileName(recordingFilename)) {
+                Log.e(TAG, "handleRecording: Invalid filename passed by user: "
+                        + recordingFilename);
+                finishActivity();
+                return;
+            }
 
         /*
         External Storage File Directory for app
@@ -137,22 +138,21 @@ public class Settings extends Activity {
         so we need to call getExternalFilesDir() method twice
         source:https://www.androidbugfix.com/2021/10/getexternalfilesdirnull-returns-null-in.html
          */
-        File externalStorageFile = getExternalFilesDir(null);
-        if (externalStorageFile == null) {
-            externalStorageFile = getExternalFilesDir(null);
-        }
-        // if path is still null despite calling method twice, early exit
-        if (externalStorageFile == null) {
-            Log.e(TAG, "handleRecording: external storage file path returns null");
-            finishActivity();
-            return;
-        }
-        recordingOutputPath = externalStorageFile.getAbsolutePath()
-                + File.separator + recordingFilename;
+            File externalStorageFile = getExternalFilesDir(null);
+            if (externalStorageFile == null) {
+                externalStorageFile = getExternalFilesDir(null);
+            }
+            // if path is still null despite calling method twice, early exit
+            if (externalStorageFile == null) {
+                Log.e(TAG, "handleRecording: external storage file path returns null");
+                finishActivity();
+                return;
+            }
+            recordingOutputPath = externalStorageFile.getAbsolutePath()
+                    + File.separator + recordingFilename;
 
-        recordingRotation = RecorderUtil.getDeviceRotation(getApplicationContext());
+            recordingRotation = RecorderUtil.getDeviceRotation(getApplicationContext());
 
-        if (recordingAction.equals(ACTION_RECORDING_START)) {
             // start record
             final MediaProjectionManager manager
                     = (MediaProjectionManager) getSystemService(
