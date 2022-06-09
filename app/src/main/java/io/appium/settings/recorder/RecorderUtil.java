@@ -125,7 +125,7 @@ public class RecorderUtil {
                         Integer.parseInt(intent.getStringExtra(ACTION_RECORDING_PRIORITY));
                 switch(userRequestedRecordingPriority) {
                     case RECORDING_PRIORITY_MAX:
-                        return RECORDING_PRIORITY_DEFAULT;
+                        return Thread.MAX_PRIORITY;
                     case RECORDING_PRIORITY_MIN:
                         return Thread.MIN_PRIORITY;
                     case RECORDING_PRIORITY_NORM:
