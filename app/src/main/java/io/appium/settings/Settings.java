@@ -93,20 +93,21 @@ public class Settings extends Activity {
 
     private void handleRecording(Intent intent) {
         if (intent == null) {
-            Log.e(TAG, "handleRecording: intent is null");
+            Log.e(TAG, "handleRecording: Unable to retrieve intent instance");
             finishActivity();
             return;
         }
 
         String recordingAction = intent.getAction();
         if (recordingAction == null) {
-            Log.e(TAG, "handleRecording: intent.getAction() is null");
+            Log.e(TAG, "handleRecording: Unable to retrieve intent.action instance");
             finishActivity();
             return;
         }
 
         if (!recordingAction.startsWith(ACTION_RECORDING_BASE)) {
-            Log.i(TAG, "handleRecording: Different intent");
+            Log.i(TAG, "handleRecording: Received different intent with action: "
+                    + recordingAction);
             finishActivity();
             return;
         }
@@ -118,7 +119,7 @@ public class Settings extends Activity {
         }
 
         if (!RecorderUtil.areRecordingPermissionsGranted(getApplicationContext())) {
-            Log.e(TAG, "handleRecording: Required Permissions are not granted");
+            Log.e(TAG, "handleRecording: Required permissions are not granted");
             finishActivity();
             return;
         }
@@ -144,7 +145,7 @@ public class Settings extends Activity {
             }
             // if path is still null despite calling method twice, early exit
             if (externalStorageFile == null) {
-                Log.e(TAG, "handleRecording: external storage file path returns null");
+                Log.e(TAG, "handleRecording: Unable to retrieve external storage file path");
                 finishActivity();
                 return;
             }
@@ -159,7 +160,8 @@ public class Settings extends Activity {
                     Context.MEDIA_PROJECTION_SERVICE);
 
             if (manager == null) {
-                Log.e(TAG, "handleRecording: manager(MediaProjectionManager) is null");
+                Log.e(TAG, "handleRecording: " +
+                        "Unable to retrieve MediaProjectionManager instance");
                 finishActivity();
                 return;
             }
@@ -175,7 +177,8 @@ public class Settings extends Activity {
 
             finishActivity();
         } else {
-            Log.e(TAG, "handleRecording: Unknown recording intent.action:" + recordingAction);
+            Log.e(TAG, "handleRecording: Unknown recording intent with action:"
+                    + recordingAction);
             finishActivity();
         }
     }
@@ -191,7 +194,8 @@ public class Settings extends Activity {
     {
         super.onActivityResult(requestCode, resultCode, data);
         if (REQUEST_CODE_SCREEN_CAPTURE != requestCode) {
-            Log.e(TAG, "handleRecording: onActivityResult: Unknown request code");
+            Log.e(TAG, "handleRecording: onActivityResult: " +
+                    "Received unknown request with code: " + requestCode);
             finishActivity();
             return;
         }

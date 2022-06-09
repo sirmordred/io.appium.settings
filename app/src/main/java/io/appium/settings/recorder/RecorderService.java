@@ -47,7 +47,7 @@ public class RecorderService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.v(TAG, "onDestroy:");
+        Log.v(TAG, "onDestroy called: Stopping recorder");
         if (recorderThread != null && recorderThread.isRecordingRunning()) {
             recorderThread.stopRecording();
         }
@@ -63,11 +63,17 @@ public class RecorderService extends Service {
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
-        Log.v(TAG, "onStartCommand:intent=" + intent);
+        if (intent == null) {
+            Log.e(TAG, "onStartCommand: Unable to retrieve recording intent");
+            return START_NOT_STICKY;
+        }
+        final String action = intent.getAction();
+        if (action == null) {
+            Log.e(TAG, "onStartCommand: Unable to retrieve recording intent:action");
+            return START_NOT_STICKY;
+        }
 
         int result = START_STICKY;
-        final String action = intent != null ? intent.getAction() : null;
-        Log.v(TAG, "onStartCommand:action string: " + action);
         if (ACTION_RECORDING_START.equals(action)) {
             showNotification(); // TODO is this really necessary
 
@@ -77,15 +83,17 @@ public class RecorderService extends Service {
             if (mMediaProjectionManager != null) {
                 startScreenRecord(mMediaProjectionManager, intent);
             } else {
-                Log.e(TAG, "mMediaProjectionManager null");
+                Log.e(TAG, "onStartCommand: " +
+                        "Unable to retrieve MediaProjectionManager instance");
                 result = START_NOT_STICKY;
             }
         } else if (ACTION_RECORDING_STOP.equals(action)) {
-            Log.v(TAG, "onStartCommand:intent=" + "stop");
+            Log.v(TAG, "onStartCommand: Received recording stop intent, stopping recording");
             stopScreenRecord();
             result = START_NOT_STICKY;
         } else {
-            Log.w(TAG, "onStartCommand: Unknown ACTION name");
+            Log.v(TAG, "onStartCommand: Received unknown recording intent with action: "
+                    + action);
             result = START_NOT_STICKY;
         }
 
@@ -99,13 +107,14 @@ public class RecorderService extends Service {
     private void startScreenRecord(MediaProjectionManager mediaProjectionManager,
                                    final Intent intent) {
         if (recorderThread != null) {
-            Log.v(TAG, "recorder thread is not null");
             if (recorderThread.isRecordingRunning()) {
-                Log.v(TAG, "recording is already continuing");
+                Log.v(TAG, "Recording is already continuing, exiting");
+                return;
             } else {
-                Log.v(TAG, "recording is stopped");
+                Log.w(TAG, "Recording is stopped, " +
+                        "but recording instance is still alive, starting recording");
+                recorderThread = null;
             }
-            return;
         }
 
         int resultCode = intent.getIntExtra(ACTION_RECORDING_RESULT_CODE, 0);
@@ -113,13 +122,13 @@ public class RecorderService extends Service {
         final MediaProjection projection = mediaProjectionManager.getMediaProjection(resultCode,
                 intent);
         if (projection == null) {
-            Log.e(TAG, "MediaProjection is null");
+            Log.e(TAG, "Recording is stopped, Unable to retrieve MediaProjection instance");
             return;
         }
 
         String outputFilePath = intent.getStringExtra(ACTION_RECORDING_FILENAME);
         if (outputFilePath == null) {
-            Log.i(TAG, "outputFilePath is null");
+            Log.e(TAG, "Recording is stopped, Unable to retrieve outputFilePath instance");
             return;
         }
 
@@ -140,18 +149,13 @@ public class RecorderService extends Service {
                 rawWidth = metrics.heightPixels;
                 rawHeight = metrics.widthPixels;
             }
-            Log.v(TAG, String.format("startRecording:(%d,%d)(%d,%d)",
-                    metrics.widthPixels, metrics.heightPixels, rawWidth, rawHeight));
         } else if (recordingRotation == 90 || recordingRotation == 270) {
             rawWidth = metrics.heightPixels;
             rawHeight = metrics.widthPixels;
-            Log.v(TAG, String.format("startRecording:(%d,%d)(%d,%d)",
-                    metrics.widthPixels, metrics.heightPixels, rawWidth, rawHeight));
-        } else {
-            // degree 0 and degree 180 conditions
-            Log.v(TAG, String.format("startRecording:(%d,%d)(%d,%d)",
-                    metrics.widthPixels, metrics.heightPixels, rawWidth, rawHeight));
         }
+
+        Log.v(TAG, String.format("Starting recording with width/height(not clamped):(%d,%d)",
+                rawWidth, rawHeight));
 
         recorderThread = new RecorderThread(projection, outputFilePath,
                 rawWidth, rawHeight, recordingRotation);

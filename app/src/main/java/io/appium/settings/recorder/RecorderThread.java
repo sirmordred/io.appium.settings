@@ -70,7 +70,7 @@ public class RecorderThread implements Runnable {
         @Override
         public void onPaused() {
             super.onPaused();
-            Log.v(TAG, "Display paused");
+            Log.v(TAG, "VirtualDisplay callback: Display streaming paused");
         }
 
         @Override
@@ -209,7 +209,7 @@ public class RecorderThread implements Runnable {
                     }
                 } catch (Exception e) {
                     if (!stopped) {
-                        Log.e(TAG, "Audio error", e);
+                        Log.e(TAG, "Recording stopped, Audio Thread error", e);
                         hasAsyncError = true;
                         e.printStackTrace();
                     }
@@ -234,7 +234,8 @@ public class RecorderThread implements Runnable {
     private int calcBitRate(int width, int height) {
         final int bitrate = (int) (RecorderConstant.BITRATE_MULTIPLIER *
                 RecorderConstant.VIDEO_CODEC_FRAME_RATE * width * height);
-        Log.i(TAG, String.format("bitrate=%5.2f[Mbps]", bitrate / 1024f / 1024f));
+        Log.i(TAG, String.format("Recording starting with bitrate=%5.2f[Mbps]",
+                bitrate / 1024f / 1024f));
         return bitrate;
     }
 
@@ -253,18 +254,19 @@ public class RecorderThread implements Runnable {
         encoderStatus = audioEncoder.dequeueOutputBuffer(bufferInfo, 0);
         if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
             if (audioTrackIndex > 0) {
-                Log.e(TAG, "audioTrackIndex greater than zero");
+                Log.e(TAG, "Recording stopped, audioTrackIndex greater than zero");
                 return false;
             }
             audioTrackIndex = muxer.addTrack(audioEncoder.getOutputFormat());
             startMuxerIfSetUp(muxer);
         } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
-            Log.w(TAG, "unexpected result from audio encoder.dequeueOutputBuffer: "
-                    + encoderStatus);
+            Log.w(TAG, "Unexpected result from audio encoder.dequeueOutputBuffer: "
+                    + encoderStatus + ", however continuing recording");
         } else if (encoderStatus >= 0) {
             ByteBuffer encodedData = audioEncoder.getOutputBuffer(encoderStatus);
             if (encodedData == null) {
-                Log.e(TAG, "encodedData null");
+                Log.e(TAG, "Recording stopped, " +
+                        "Unable to retrieve output buffer of audio encoder");
                 return false;
             }
 
@@ -278,7 +280,7 @@ public class RecorderThread implements Runnable {
             audioEncoder.releaseOutputBuffer(encoderStatus, false);
 
             if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Log.v(TAG, "buffer eos");
+                Log.v(TAG, "Recording stopped, audio encoder buffer reached end of stream");
                 return false;
             }
         }
@@ -294,18 +296,19 @@ public class RecorderThread implements Runnable {
                 RecorderConstant.MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT_MS);
         if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
             if (videoTrackIndex > 0) {
-                Log.e(TAG, "videoTrackIndex greater than zero");
+                Log.e(TAG, "Recording stopped, videoTrackIndex greater than zero");
                 return false;
             }
             videoTrackIndex = muxer.addTrack(videoEncoder.getOutputFormat());
             startMuxerIfSetUp(muxer);
         } else if (encoderStatus < 0 && encoderStatus != MediaCodec.INFO_TRY_AGAIN_LATER) {
-            Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: "
-                    + encoderStatus);
+            Log.w(TAG, "Unexpected result from encoder.dequeueOutputBuffer: "
+                    + encoderStatus + ", however continuing recording");
         } else if (encoderStatus >= 0) {
             ByteBuffer encodedData = videoEncoder.getOutputBuffer(encoderStatus);
             if (encodedData == null) {
-                Log.w(TAG, "videoEncoder, encodedData null");
+                Log.w(TAG, "Recording stopped, " +
+                        "Unable to retrieve output buffer of videoEncoder");
                 return false;
             }
 
@@ -318,7 +321,7 @@ public class RecorderThread implements Runnable {
             videoEncoder.releaseOutputBuffer(encoderStatus, false);
 
             if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Log.v(TAG, "videoEncoder, buffer eos");
+                Log.v(TAG, "Recording stopped, video encoder buffer reached end of stream");
                 return false;
             }
         }
