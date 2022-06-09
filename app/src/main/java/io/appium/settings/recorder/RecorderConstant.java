@@ -26,6 +26,7 @@ public class RecorderConstant {
     public static final String ACTION_RECORDING_RESULT_CODE = "result_code";
     public static final String ACTION_RECORDING_FILENAME = "recording_filename";
     public static final String ACTION_RECORDING_ROTATION = "recording_rotation";
+    public static final String ACTION_RECORDING_PRIORITY = "recording_priority";
     public static final float BITRATE_MULTIPLIER = 0.25f;
     public static final int AUDIO_CODEC_SAMPLE_RATE_HZ = 44100;
     public static final int AUDIO_CODEC_CHANNEL_COUNT = 1;
@@ -38,4 +39,8 @@ public class RecorderConstant {
     public static final long NO_TIMESTAMP_SET = -1;
     public static final int NO_ROTATION_SET = -1;
     public static final int NO_TRACK_INDEX_SET = -1;
+    public static final int RECORDING_PRIORITY_MAX = 0;
+    public static final int RECORDING_PRIORITY_MIN = 1;
+    public static final int RECORDING_PRIORITY_NORM = 2;
+    public static final int RECORDING_PRIORITY_DEFAULT = Thread.MAX_PRIORITY;
 }

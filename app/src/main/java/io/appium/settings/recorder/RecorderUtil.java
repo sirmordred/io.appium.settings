@@ -18,8 +18,10 @@ package io.appium.settings.recorder;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
@@ -27,9 +29,16 @@ import android.view.WindowManager;
 import androidx.core.app.ActivityCompat;
 
 import static android.content.Context.WINDOW_SERVICE;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
 import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MIN;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_NORM;
 
 public class RecorderUtil {
+    private static final String TAG = "RecorderUtil";
+
     public static boolean isLowerThanQ() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q;
     }
@@ -107,5 +116,29 @@ public class RecorderUtil {
                 break;
         }
         return NO_ROTATION_SET;
+    }
+
+    public static int getRecordingPriority(Intent intent) {
+        if (intent.hasExtra(ACTION_RECORDING_PRIORITY)) {
+            try {
+                int userRequestedRecordingPriority =
+                        Integer.parseInt(intent.getStringExtra(ACTION_RECORDING_PRIORITY));
+                switch(userRequestedRecordingPriority) {
+                    case RECORDING_PRIORITY_MAX:
+                        return RECORDING_PRIORITY_DEFAULT;
+                    case RECORDING_PRIORITY_MIN:
+                        return Thread.MIN_PRIORITY;
+                    case RECORDING_PRIORITY_NORM:
+                        return Thread.NORM_PRIORITY;
+                    default:
+                        break;
+                }
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "Exception while retrieving recording priority", e);
+            }
+        } else {
+            Log.e(TAG, "Unable to retrieve recording priority");
+        }
+        return RECORDING_PRIORITY_DEFAULT;
     }
 }

@@ -42,6 +42,7 @@ import androidx.annotation.RequiresApi;
 import static io.appium.settings.recorder.RecorderConstant.NANOSECOND_TO_MICROSECOND;
 import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
 import static io.appium.settings.recorder.RecorderConstant.NO_TRACK_INDEX_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 
 public class RecorderThread implements Runnable {
 
@@ -52,6 +53,7 @@ public class RecorderThread implements Runnable {
     private final int videoWidth;
     private final int videoHeight;
     private final int recordingRotation;
+    private int recordingPriority = RECORDING_PRIORITY_DEFAULT;
 
     private boolean muxerStarted = false;
     private boolean isStartTimestampInitialized = false;
@@ -83,12 +85,14 @@ public class RecorderThread implements Runnable {
     };
 
     public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
-                          int videoWidth, int videoHeight, int recordingRotation) {
+                          int videoWidth, int videoHeight, int recordingRotation,
+                          int recordingPriority) {
         this.mediaProjection = mediaProjection;
         this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
         this.recordingRotation = recordingRotation;
+        this.recordingPriority = recordingPriority;
     }
 
     public void startRecording() {
@@ -170,11 +174,12 @@ public class RecorderThread implements Runnable {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private Thread initAudioRecordThread(MediaCodec audioEncoder, final AudioRecord audioRecord) {
+    private Thread initAudioRecordThread(MediaCodec audioEncoder, final AudioRecord audioRecord,
+                                         int priority) {
         return new Thread(new Runnable() {
             @Override
             public void run() {
-                Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+                Thread.currentThread().setPriority(priority);
                 try {
                     audioRecord.startRecording();
                 } catch (Exception e) {
@@ -387,7 +392,8 @@ public class RecorderThread implements Runnable {
             // note: this method must be run before muxer.start()
             muxer.setOrientationHint(recordingRotation);
 
-            audioRecordThread = initAudioRecordThread(audioEncoder, audioRecord);
+            audioRecordThread = initAudioRecordThread(audioEncoder, audioRecord,
+                    this.recordingPriority);
             audioRecordThread.start();
 
             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();

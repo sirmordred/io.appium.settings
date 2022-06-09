@@ -48,11 +48,13 @@ import io.appium.settings.recorder.RecorderUtil;
 
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_BASE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
 import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
 import static io.appium.settings.recorder.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 
 public class Settings extends Activity {
@@ -60,6 +62,7 @@ public class Settings extends Activity {
 
     private String recordingOutputPath = "";
     private int recordingRotation = NO_ROTATION_SET;
+    private int recordingPriority = RECORDING_PRIORITY_MAX;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -154,6 +157,8 @@ public class Settings extends Activity {
 
             recordingRotation = RecorderUtil.getDeviceRotation(getApplicationContext());
 
+            recordingPriority = RecorderUtil.getRecordingPriority(intent);
+
             // start record
             final MediaProjectionManager manager
                     = (MediaProjectionManager) getSystemService(
@@ -213,6 +218,7 @@ public class Settings extends Activity {
         intent.putExtra(ACTION_RECORDING_RESULT_CODE, resultCode);
         intent.putExtra(ACTION_RECORDING_FILENAME, recordingOutputPath);
         intent.putExtra(ACTION_RECORDING_ROTATION, recordingRotation);
+        intent.putExtra(ACTION_RECORDING_PRIORITY, recordingPriority);
         intent.putExtras(data);
 
         startService(intent);
