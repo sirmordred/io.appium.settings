@@ -31,11 +31,13 @@ import androidx.annotation.RequiresApi;
 import io.appium.settings.helpers.NotificationHelpers;
 
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_MAX_DURATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 
 public class RecorderService extends Service {
@@ -162,8 +164,12 @@ public class RecorderService extends Service {
         int recordingPriority = intent.getIntExtra(ACTION_RECORDING_PRIORITY,
                 RECORDING_PRIORITY_DEFAULT);
 
+        int recordingMaxDuration = intent.getIntExtra(ACTION_RECORDING_MAX_DURATION,
+                RECORDING_MAX_DURATION_DEFAULT_MS);
+
         recorderThread = new RecorderThread(projection, outputFilePath,
-                rawWidth, rawHeight, recordingRotation, recordingPriority);
+                rawWidth, rawHeight, recordingRotation, recordingPriority,
+                recordingMaxDuration);
         recorderThread.startRecording();
     }
 

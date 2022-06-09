@@ -48,12 +48,14 @@ import io.appium.settings.recorder.RecorderUtil;
 
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_BASE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_MAX_DURATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
 import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
 import static io.appium.settings.recorder.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 
@@ -63,6 +65,7 @@ public class Settings extends Activity {
     private String recordingOutputPath = "";
     private int recordingRotation = NO_ROTATION_SET;
     private int recordingPriority = RECORDING_PRIORITY_MAX;
+    private int recordingMaxDuration = RECORDING_MAX_DURATION_DEFAULT_MS;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -159,6 +162,8 @@ public class Settings extends Activity {
 
             recordingPriority = RecorderUtil.getRecordingPriority(intent);
 
+            recordingMaxDuration = RecorderUtil.getRecordingMaxDuration(intent);
+
             // start record
             final MediaProjectionManager manager
                     = (MediaProjectionManager) getSystemService(
@@ -219,6 +224,7 @@ public class Settings extends Activity {
         intent.putExtra(ACTION_RECORDING_FILENAME, recordingOutputPath);
         intent.putExtra(ACTION_RECORDING_ROTATION, recordingRotation);
         intent.putExtra(ACTION_RECORDING_PRIORITY, recordingPriority);
+        intent.putExtra(ACTION_RECORDING_MAX_DURATION, recordingMaxDuration);
         intent.putExtras(data);
 
         startService(intent);

@@ -29,8 +29,10 @@ import android.view.WindowManager;
 import androidx.core.app.ActivityCompat;
 
 import static android.content.Context.WINDOW_SERVICE;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_MAX_DURATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
 import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MIN;
@@ -140,5 +142,25 @@ public class RecorderUtil {
             Log.e(TAG, "Unable to retrieve recording priority");
         }
         return RECORDING_PRIORITY_DEFAULT;
+    }
+
+    public static int getRecordingMaxDuration(Intent intent) {
+        if (intent.hasExtra(ACTION_RECORDING_MAX_DURATION)) {
+            try {
+                int userRequestedMaxDurationInSecond =
+                        Integer.parseInt(intent.getStringExtra(ACTION_RECORDING_MAX_DURATION));
+                if (userRequestedMaxDurationInSecond <= 0) {
+                    Log.e(TAG, "Maximum recording duration must be greater than 0 second");
+                    return RECORDING_MAX_DURATION_DEFAULT_MS;
+                }
+                // Convert it to millisecond and return
+                return userRequestedMaxDurationInSecond * 1000;
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "Exception while retrieving recording max duration", e);
+            }
+        } else {
+            Log.e(TAG, "Unable to retrieve recording max duration");
+        }
+        return RECORDING_MAX_DURATION_DEFAULT_MS;
     }
 }

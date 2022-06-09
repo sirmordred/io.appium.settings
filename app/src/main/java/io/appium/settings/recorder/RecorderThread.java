@@ -53,7 +53,8 @@ public class RecorderThread implements Runnable {
     private final int videoWidth;
     private final int videoHeight;
     private final int recordingRotation;
-    private int recordingPriority = RECORDING_PRIORITY_DEFAULT;
+    private final int recordingPriority;
+    private final int recordingMaxDuration;
 
     private boolean muxerStarted = false;
     private boolean isStartTimestampInitialized = false;
@@ -86,13 +87,14 @@ public class RecorderThread implements Runnable {
 
     public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
                           int videoWidth, int videoHeight, int recordingRotation,
-                          int recordingPriority) {
+                          int recordingPriority, int recordingMaxDuration) {
         this.mediaProjection = mediaProjection;
         this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
         this.recordingRotation = recordingRotation;
         this.recordingPriority = recordingPriority;
+        this.recordingMaxDuration = recordingMaxDuration;
     }
 
     public void startRecording() {
@@ -399,6 +401,8 @@ public class RecorderThread implements Runnable {
             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
             lastAudioTimestampUs = NO_TIMESTAMP_SET;
 
+            long recordingStartTime = System.currentTimeMillis();
+
             while (!stopped && !hasAsyncError) {
                 if (!writeAudioBufferToFile(audioEncoder, muxer, bufferInfo)) {
                     break;
@@ -410,6 +414,11 @@ public class RecorderThread implements Runnable {
 
                 if (!writeVideoBufferToFile(videoEncoder, muxer, bufferInfo)) {
                     break;
+                }
+
+                if ((System.currentTimeMillis() - recordingStartTime) < this.recordingMaxDuration) {
+                    Log.v(TAG, "Recording stopped, reached maximum duration");
+                    stopped = true;
                 }
             }
         } catch (Exception mainException) {
