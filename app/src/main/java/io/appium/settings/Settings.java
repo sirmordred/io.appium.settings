@@ -28,6 +28,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -155,8 +156,11 @@ public class Settings extends Activity {
                 finishActivity();
                 return;
             }
-            recordingOutputPath = externalStorageFile.getAbsolutePath()
-                    + File.separator + recordingFilename;
+
+            recordingOutputPath = Paths
+                    .get(externalStorageFile.getAbsolutePath(), recordingFilename)
+                    .toAbsolutePath()
+                    .toString();
 
             recordingRotation = RecorderUtil.getDeviceRotation(getApplicationContext());
 
