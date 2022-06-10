@@ -416,7 +416,7 @@ public class RecorderThread implements Runnable {
                     break;
                 }
 
-                if ((System.currentTimeMillis() - recordingStartTime) < this.recordingMaxDuration) {
+                if ((System.currentTimeMillis() - recordingStartTime) >= this.recordingMaxDuration) {
                     Log.v(TAG, "Recording stopped, reached maximum duration");
                     stopped = true;
                 }
