@@ -332,13 +332,13 @@ adb shell appops set io.appium.settings PROJECT_MEDIA allow
 
 Start Recording:
 ```bash
-adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_START --es "recording_filename" "abc.mp4" --es "recording_priority" 0 --es "recording_max_duration" 900
+adb shell am start -n "io.appium.settings/io.appium.settings.Settings" -a io.appium.settings.recording.ACTION_START --es filename abc.mp4 --es priority 2 --es max_duration_sec 900
 ```
 
 ### Arguments (see above start command as an example for giving arguments)
-- recording_filename (Mandatory) - You can type recording video file name as you want, but recording currently supports only "mp4" format so your filename must end with ".mp4"
-- recording_priority (Optional) - Default value: 0 which means recording thread priority is Maximum hovewer if you face performance drops during testing with recording enabled, you can reduce recording priority to 2 - Normal or 1 - Minimum
-- recording_max_duration (Optional) (in seconds) - Default value: 900 seconds which means maximum allowed duration is 15 minute, you can increase it if your test takes longer than that
+- filename (Mandatory) - You can type recording video file name as you want, but recording currently supports only "mp4" format so your filename must end with ".mp4"
+- priority (Optional) - Default value: 2 which means recording thread priority is Maximum however if you face performance drops during testing with recording enabled, you can reduce recording priority to 1 - Normal or 0 - Minimum
+- max_duration_sec (Optional) (in seconds) - Default value: 900 seconds which means maximum allowed duration is 15 minute, you can increase it if your test takes longer than that
 
 Stop Recording:
 ```bash
