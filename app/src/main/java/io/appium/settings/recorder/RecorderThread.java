@@ -39,10 +39,9 @@ import java.nio.ByteBuffer;
 
 import androidx.annotation.RequiresApi;
 
-import static io.appium.settings.recorder.RecorderConstant.NANOSECOND_TO_MICROSECOND;
+import static io.appium.settings.recorder.RecorderConstant.NANOSECONDS_IN_MICROSECOND;
 import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
 import static io.appium.settings.recorder.RecorderConstant.NO_TRACK_INDEX_SET;
-import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 
 public class RecorderThread implements Runnable {
 
@@ -58,7 +57,7 @@ public class RecorderThread implements Runnable {
 
     private boolean muxerStarted = false;
     private boolean isStartTimestampInitialized = false;
-    private long startTimestampUs = System.nanoTime() / NANOSECOND_TO_MICROSECOND;
+    private long startTimestampUs = System.nanoTime() / NANOSECONDS_IN_MICROSECOND;
     private long lastAudioTimestampUs = NO_TIMESTAMP_SET;
 
     private int videoTrackIndex = NO_TRACK_INDEX_SET;
@@ -231,10 +230,10 @@ public class RecorderThread implements Runnable {
     private long getPresentationTimeUs() {
         if (!isStartTimestampInitialized) {
             startTimestampUs =
-                    System.nanoTime() / RecorderConstant.NANOSECOND_TO_MICROSECOND;
+                    System.nanoTime() / RecorderConstant.NANOSECONDS_IN_MICROSECOND;
             isStartTimestampInitialized = true;
         }
-        return (System.nanoTime() / RecorderConstant.NANOSECOND_TO_MICROSECOND
+        return (System.nanoTime() / RecorderConstant.NANOSECONDS_IN_MICROSECOND
                         - startTimestampUs);
     }
 
