@@ -327,7 +327,6 @@ REQUIRED STEPS to activate recording:
 
 ```bash
 adb shell pm grant io.appium.settings android.permission.RECORD_AUDIO
-adb shell pm grant io.appium.settings android.permission.WRITE_EXTERNAL_STORAGE
 adb shell appops set io.appium.settings PROJECT_MEDIA allow
 ```
 

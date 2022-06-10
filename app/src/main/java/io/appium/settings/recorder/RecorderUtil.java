@@ -47,13 +47,10 @@ public class RecorderUtil {
 
     public static boolean areRecordingPermissionsGranted(Context context) {
         // Check if we have required permission
-        int permission = ActivityCompat.checkSelfPermission(context,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);
         int permissionAudio = ActivityCompat.checkSelfPermission(context,
                 Manifest.permission.RECORD_AUDIO);
 
-        return permission == PackageManager.PERMISSION_GRANTED
-                && permissionAudio == PackageManager.PERMISSION_GRANTED;
+        return permissionAudio == PackageManager.PERMISSION_GRANTED;
     }
 
     public static boolean isValidFileName(String filename) {
