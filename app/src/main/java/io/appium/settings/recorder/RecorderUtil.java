@@ -17,8 +17,10 @@
 package io.appium.settings.recorder;
 
 import android.Manifest;
+import android.app.AppOpsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
@@ -26,6 +28,7 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
 import static android.content.Context.WINDOW_SERVICE;
@@ -45,12 +48,33 @@ public class RecorderUtil {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     public static boolean areRecordingPermissionsGranted(Context context) {
         // Check if we have required permission
         int permissionAudio = ActivityCompat.checkSelfPermission(context,
                 Manifest.permission.RECORD_AUDIO);
 
-        return permissionAudio == PackageManager.PERMISSION_GRANTED;
+        return permissionAudio == PackageManager.PERMISSION_GRANTED
+                && isMediaProjectionPermissionGranted(context);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    public static boolean isMediaProjectionPermissionGranted(Context context) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+            ApplicationInfo applicationInfo =
+                    packageManager.getApplicationInfo(context.getPackageName(), 0);
+            AppOpsManager appOpsManager =
+                    (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+            // AppOpsManager.OPSTR_PROJECT_MEDIA == "android:project_media" is a hidden field value,
+            // so directly taken from https://android.googlesource.com/platform/frameworks/base/+/refs/heads/master/core/java/android/app/AppOpsManager.java#1532
+            int mode = appOpsManager.unsafeCheckOpNoThrow("android:project_media",
+                    applicationInfo.uid, applicationInfo.packageName);
+            return (mode == AppOpsManager.MODE_ALLOWED);
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Exception while checking media projection permission", e);
+            return false;
+        }
     }
 
     public static boolean isValidFileName(String filename) {
