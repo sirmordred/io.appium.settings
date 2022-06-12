@@ -42,6 +42,7 @@ import androidx.annotation.RequiresApi;
 import static io.appium.settings.recorder.RecorderConstant.NANOSECONDS_IN_MICROSECOND;
 import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
 import static io.appium.settings.recorder.RecorderConstant.NO_TRACK_INDEX_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_DEFAULT_VIDEO_MIME_TYPE;
 
 public class RecorderThread implements Runnable {
 
@@ -51,6 +52,7 @@ public class RecorderThread implements Runnable {
     private final String outputFilePath;
     private final int videoWidth;
     private final int videoHeight;
+    private final int videoDpi;
     private final int recordingRotation;
     private final int recordingPriority;
     private final int recordingMaxDuration;
@@ -85,12 +87,13 @@ public class RecorderThread implements Runnable {
     };
 
     public RecorderThread(MediaProjection mediaProjection, String outputFilePath,
-                          int videoWidth, int videoHeight, int recordingRotation,
+                          int videoWidth, int videoHeight, int videoDpi,  int recordingRotation,
                           int recordingPriority, int recordingMaxDuration) {
         this.mediaProjection = mediaProjection;
         this.outputFilePath = outputFilePath;
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
+        this.videoDpi = videoDpi;
         this.recordingRotation = recordingRotation;
         this.recordingPriority = recordingPriority;
         this.recordingMaxDuration = recordingMaxDuration;
@@ -130,9 +133,9 @@ public class RecorderThread implements Runnable {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private VirtualDisplay initVirtualDisplay(MediaProjection mediaProjection,
                                                Surface surface, Handler handler,
-                                               int videoWidth, int videoHeight) {
+                                               int videoWidth, int videoHeight, int videoDpi) {
         return mediaProjection.createVirtualDisplay("Appium Screen Recorder",
-                videoWidth, videoHeight, DisplayMetrics.DENSITY_HIGH,
+                videoWidth, videoHeight, videoDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 surface, displayCallback, handler);
     }
@@ -237,7 +240,7 @@ public class RecorderThread implements Runnable {
                         - startTimestampUs);
     }
 
-    private int calcBitRate(int width, int height) {
+    private int calculateBitRate(int width, int height) {
         final int bitrate = (int) (RecorderConstant.BITRATE_MULTIPLIER *
                 RecorderConstant.VIDEO_CODEC_FRAME_RATE * width * height);
         Log.i(TAG, String.format("Recording starting with bitrate=%5.2f[Mbps]",
@@ -345,31 +348,18 @@ public class RecorderThread implements Runnable {
         Thread audioRecordThread = null;
         MediaMuxer muxer = null;
         try {
-            String videoMime = MediaFormat.MIMETYPE_VIDEO_AVC;
-            videoEncoder = MediaCodec.createEncoderByType(videoMime);
+            videoEncoder = MediaCodec.createEncoderByType(RECORDING_DEFAULT_VIDEO_MIME_TYPE);
 
-            /* Clamp raw width/height of device screen with video encoder's capabilities
-             *  to avoid crash.
-             * */
-            MediaCodecInfo.VideoCapabilities videoEncoderCapabilities = videoEncoder.getCodecInfo().
-                    getCapabilitiesForType(videoMime).getVideoCapabilities();
-            int finalVideoWidth =
-                    videoEncoderCapabilities.getSupportedWidths().clamp(this.videoWidth);
-            int finalVideoHeight =
-                    videoEncoderCapabilities.getSupportedHeights().clamp(this.videoHeight);
+            MediaCodecInfo.VideoCapabilities videoEncoderCapabilities = videoEncoder
+                    .getCodecInfo().getCapabilitiesForType(RECORDING_DEFAULT_VIDEO_MIME_TYPE)
+                    .getVideoCapabilities();
 
-            if (finalVideoHeight > 1920) {
-                finalVideoHeight = 1920;
-            }
+            int videoBitrate = videoEncoderCapabilities.getBitrateRange()
+                    .clamp(calculateBitRate(this.videoWidth, this.videoHeight));
 
-            if (finalVideoWidth > 1080) {
-                finalVideoWidth = 1080;
-            }
-
-            int videoBitrate = calcBitRate(videoWidth, videoHeight);
-
-            MediaFormat videoEncoderFormat = initVideoEncoderFormat(videoMime,
-                    finalVideoWidth, finalVideoHeight, videoBitrate);
+            MediaFormat videoEncoderFormat =
+                    initVideoEncoderFormat(RECORDING_DEFAULT_VIDEO_MIME_TYPE,
+                            this.videoWidth, this.videoHeight, videoBitrate);
 
             videoEncoder.configure(videoEncoderFormat, null, null,
                     MediaCodec.CONFIGURE_FLAG_ENCODE);
@@ -378,7 +368,7 @@ public class RecorderThread implements Runnable {
 
             Handler handler = new Handler(Looper.getMainLooper());
             virtualDisplay = initVirtualDisplay(this.mediaProjection, surface, handler,
-                    finalVideoWidth, finalVideoHeight);
+                    this.videoWidth, this.videoHeight, this.videoDpi);
 
             int sampleRate = RecorderConstant.AUDIO_CODEC_SAMPLE_RATE_HZ;
             audioEncoder = initAudioCodec(sampleRate);

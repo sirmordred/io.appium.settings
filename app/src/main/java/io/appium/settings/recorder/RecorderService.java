@@ -25,6 +25,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -33,12 +34,15 @@ import io.appium.settings.helpers.NotificationHelpers;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_MAX_DURATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESOLUTION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
+import static io.appium.settings.recorder.RecorderConstant.NO_RESOLUTION_MODE_SET;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_ROTATION_DEFAULT_DEGREE;
 
 public class RecorderService extends Service {
     private static final String TAG = "RecorderService";
@@ -136,30 +140,38 @@ public class RecorderService extends Service {
             return;
         }
 
+        /* TODO we need to rotate frames that comes from virtual screen before writing to file via muxer,
+         *  for handling landscape mode properly, we need to find a way to rotate images somehow fast and reliable
+         */
+        int recordingRotationDegree = intent.getIntExtra(ACTION_RECORDING_ROTATION,
+                RECORDING_ROTATION_DEFAULT_DEGREE);
+
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         int rawWidth = metrics.widthPixels;
         int rawHeight = metrics.heightPixels;
+        int rawDpi = metrics.densityDpi;
 
-        int recordingRotation = intent.getIntExtra(ACTION_RECORDING_ROTATION, -1);
+        int recordingResolutionMode = intent.getIntExtra(ACTION_RECORDING_RESOLUTION,
+                NO_RESOLUTION_MODE_SET);
 
-        if (recordingRotation == -1) {
-            // fallback to our old determination method
-            if (rawWidth > rawHeight) {
-                // landscape mode
-                /* TODO we need to rotate frames that comes from virtual screen before writing to file via muxer,
-                 *  for handling landscape mode properly, rotateYuvImages somehow fast and reliable
-                 *  for now, just flip width and height to fake and force portrait mode instead of landscape
-                 * */
-                rawWidth = metrics.heightPixels;
-                rawHeight = metrics.widthPixels;
-            }
-        } else if (recordingRotation == 90 || recordingRotation == 270) {
-            rawWidth = metrics.heightPixels;
-            rawHeight = metrics.widthPixels;
+        Pair<Integer, Integer> recordingResolution = RecorderUtil.
+                getRecordingResolution(recordingResolutionMode);
+
+        int resolutionWidth = recordingResolution.first;
+        int resolutionHeight = recordingResolution.second;
+
+        /*
+        MediaCodec's tested supported resolutions (as per CTS tests) are for landscape mode as default (1920x1080, 1280x720 etc.)
+        but if phone or tablet is in portrait mode (usually it is),
+        we need to flip width/height to match it
+         */
+        if (rawWidth < rawHeight) {
+            resolutionWidth = recordingResolution.second;
+            resolutionHeight = recordingResolution.first;
         }
 
-        Log.v(TAG, String.format("Starting recording with width/height(not clamped):(%d,%d)",
-                rawWidth, rawHeight));
+        Log.v(TAG, String.format("Starting recording with resolution(widthxheight): (%dx%d)",
+                resolutionWidth, resolutionHeight));
 
         int recordingPriority = intent.getIntExtra(ACTION_RECORDING_PRIORITY,
                 RECORDING_PRIORITY_DEFAULT);
@@ -168,8 +180,8 @@ public class RecorderService extends Service {
                 RECORDING_MAX_DURATION_DEFAULT_MS);
 
         recorderThread = new RecorderThread(projection, outputFilePath,
-                rawWidth, rawHeight, recordingRotation, recordingPriority,
-                recordingMaxDuration);
+                resolutionWidth, resolutionHeight, rawDpi,
+                recordingRotationDegree, recordingPriority, recordingMaxDuration);
         recorderThread.startRecording();
     }
 

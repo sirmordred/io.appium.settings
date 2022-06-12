@@ -22,11 +22,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
 import android.os.Build;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
+
+import java.io.IOException;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
@@ -34,12 +39,22 @@ import androidx.core.app.ActivityCompat;
 import static android.content.Context.WINDOW_SERVICE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_MAX_DURATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
-import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESOLUTION;
+import static io.appium.settings.recorder.RecorderConstant.NO_RESOLUTION_MODE_SET;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_DEFAULT_VIDEO_MIME_TYPE;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MIN;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_NORM;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_480P;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_DEFAULT;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_FULL_HD;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_HD;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_LIST;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_QCIF;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_RESOLUTION_QVGA;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_ROTATION_DEFAULT_DEGREE;
 
 public class RecorderUtil {
     private static final String TAG = "RecorderUtil";
@@ -111,14 +126,14 @@ public class RecorderUtil {
         }
     }
 
-    public static int getDeviceRotation(Context context) {
+    public static int getDeviceRotationInDegree(Context context) {
         WindowManager wm = (WindowManager) context.getSystemService(WINDOW_SERVICE);
         if (wm == null) {
-            return NO_ROTATION_SET;
+            return RECORDING_ROTATION_DEFAULT_DEGREE;
         }
         Display display = wm.getDefaultDisplay();
         if (display == null) {
-            return NO_ROTATION_SET;
+            return RECORDING_ROTATION_DEFAULT_DEGREE;
         }
         int deviceRotation = display.getRotation();
 
@@ -138,7 +153,7 @@ public class RecorderUtil {
             default:
                 break;
         }
-        return NO_ROTATION_SET;
+        return RECORDING_ROTATION_DEFAULT_DEGREE;
     }
 
     public static int getRecordingPriority(Intent intent) {
@@ -183,5 +198,64 @@ public class RecorderUtil {
             Log.e(TAG, "Unable to retrieve recording max duration");
         }
         return RECORDING_MAX_DURATION_DEFAULT_MS;
+    }
+
+    public static int getRecordingResolutionMode(Intent intent) {
+        if (intent.hasExtra(ACTION_RECORDING_RESOLUTION)) {
+            try {
+                int userRequestedResolutionMode =
+                        Integer.parseInt(intent.getStringExtra(ACTION_RECORDING_RESOLUTION));
+                if (userRequestedResolutionMode < 1 || userRequestedResolutionMode > 5) {
+                    return NO_RESOLUTION_MODE_SET;
+                }
+                return userRequestedResolutionMode;
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "Exception while retrieving recording priority", e);
+            }
+        } else {
+            Log.e(TAG, "Unable to retrieve recording priority");
+        }
+        return NO_RESOLUTION_MODE_SET;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static Pair<Integer, Integer> getRecordingResolution(int userRequestedResolutionMode) {
+        switch(userRequestedResolutionMode) {
+            case RECORDING_RESOLUTION_FULL_HD:
+                return Pair.create(1920, 1080);
+            case RECORDING_RESOLUTION_HD:
+                return Pair.create(1280, 720);
+            case RECORDING_RESOLUTION_480P:
+                return Pair.create(720, 480);
+            case RECORDING_RESOLUTION_QVGA:
+                return Pair.create(320, 240);
+            case RECORDING_RESOLUTION_QCIF:
+                return Pair.create(176, 144);
+            default:
+                break;
+        }
+        return getSupportedMaxResolution();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static Pair<Integer, Integer> getSupportedMaxResolution() {
+        try {
+            MediaCodec videoEncoder =
+                    MediaCodec.createEncoderByType(RECORDING_DEFAULT_VIDEO_MIME_TYPE);
+            MediaCodecInfo.VideoCapabilities videoEncoderCapabilities = videoEncoder
+                    .getCodecInfo().getCapabilitiesForType(RECORDING_DEFAULT_VIDEO_MIME_TYPE)
+                    .getVideoCapabilities();
+
+            for(Pair<Integer, Integer> resolution: RECORDING_RESOLUTION_LIST) {
+                if (videoEncoderCapabilities.isSizeSupported(
+                        resolution.first, resolution.second)) {
+                    return resolution;
+                }
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Exception while retrieving default supported recording resolution", e);
+        }
+
+        return RECORDING_RESOLUTION_DEFAULT;
     }
 }

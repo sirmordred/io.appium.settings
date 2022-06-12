@@ -51,22 +51,26 @@ import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_BASE
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_FILENAME;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_MAX_DURATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_PRIORITY;
+import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESOLUTION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESULT_CODE;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
-import static io.appium.settings.recorder.RecorderConstant.NO_ROTATION_SET;
+import static io.appium.settings.recorder.RecorderConstant.NO_PATH_SET;
+import static io.appium.settings.recorder.RecorderConstant.NO_RESOLUTION_MODE_SET;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_ROTATION_DEFAULT_DEGREE;
 import static io.appium.settings.recorder.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 
 public class Settings extends Activity {
     private static final String TAG = "APPIUM SETTINGS";
 
-    private String recordingOutputPath = "";
-    private int recordingRotation = NO_ROTATION_SET;
+    private String recordingOutputPath = NO_PATH_SET;
+    private int recordingRotation = RECORDING_ROTATION_DEFAULT_DEGREE;
     private int recordingPriority = RECORDING_PRIORITY_MAX;
     private int recordingMaxDuration = RECORDING_MAX_DURATION_DEFAULT_MS;
+    private int recordingResolutionMode = NO_RESOLUTION_MODE_SET;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -162,11 +166,13 @@ public class Settings extends Activity {
                     .toAbsolutePath()
                     .toString();
 
-            recordingRotation = RecorderUtil.getDeviceRotation(getApplicationContext());
+            recordingRotation = RecorderUtil.getDeviceRotationInDegree(getApplicationContext());
 
             recordingPriority = RecorderUtil.getRecordingPriority(intent);
 
             recordingMaxDuration = RecorderUtil.getRecordingMaxDuration(intent);
+
+            recordingResolutionMode = RecorderUtil.getRecordingResolutionMode(intent);
 
             // start record
             final MediaProjectionManager manager
@@ -229,6 +235,7 @@ public class Settings extends Activity {
         intent.putExtra(ACTION_RECORDING_ROTATION, recordingRotation);
         intent.putExtra(ACTION_RECORDING_PRIORITY, recordingPriority);
         intent.putExtra(ACTION_RECORDING_MAX_DURATION, recordingMaxDuration);
+        intent.putExtra(ACTION_RECORDING_RESOLUTION, recordingResolutionMode);
         intent.putExtras(data);
 
         startService(intent);
