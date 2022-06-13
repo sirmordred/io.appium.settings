@@ -39,6 +39,7 @@ import java.nio.ByteBuffer;
 
 import androidx.annotation.RequiresApi;
 
+import static io.appium.settings.recorder.RecorderConstant.BPS_IN_MBPS;
 import static io.appium.settings.recorder.RecorderConstant.NANOSECONDS_IN_MICROSECOND;
 import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
 import static io.appium.settings.recorder.RecorderConstant.NO_TRACK_INDEX_SET;
@@ -143,7 +144,7 @@ public class RecorderThread implements Runnable {
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private MediaCodec initAudioCodec(int sampleRate) throws IOException {
-        // Encoded video resolution matches virtual display. TODO set channelCount 2 try stereo quality
+        // TODO set channelCount 2 try stereo quality
         MediaFormat encoderFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC,
                 sampleRate, RecorderConstant.AUDIO_CODEC_CHANNEL_COUNT);
         encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE,
@@ -242,11 +243,8 @@ public class RecorderThread implements Runnable {
     }
 
     private int calculateBitRate(int width, int height, int frameRate) {
-        final int bitrate = (int) (RecorderConstant.BITRATE_MULTIPLIER *
+        return (int) (RecorderConstant.BITRATE_MULTIPLIER *
                 frameRate * width * height);
-        Log.i(TAG, String.format("Recording starting with bitrate=%5.2f[Mbps]",
-                bitrate / 1024f / 1024f));
-        return bitrate;
     }
 
     private void startMuxerIfSetUp(MediaMuxer muxer) {
@@ -360,6 +358,10 @@ public class RecorderThread implements Runnable {
 
             int videoBitrate = videoEncoderCapabilities.getBitrateRange()
                     .clamp(calculateBitRate(this.videoWidth, this.videoHeight, videoFrameRate));
+
+            Log.i(TAG, String.format("Recording starting with frame rate = %d FPS " +
+                            "and bitrate = %5.2f Mbps",
+                    videoFrameRate, videoBitrate / BPS_IN_MBPS));
 
             MediaFormat videoEncoderFormat =
                     initVideoEncoderFormat(RECORDING_DEFAULT_VIDEO_MIME_TYPE,

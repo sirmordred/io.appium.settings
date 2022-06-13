@@ -89,7 +89,7 @@ public class RecorderService extends Service {
                     (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
             if (mMediaProjectionManager != null) {
-                startScreenRecord(mMediaProjectionManager, intent);
+                startRecord(mMediaProjectionManager, intent);
             } else {
                 Log.e(TAG, "onStartCommand: " +
                         "Unable to retrieve MediaProjectionManager instance");
@@ -97,7 +97,7 @@ public class RecorderService extends Service {
             }
         } else if (ACTION_RECORDING_STOP.equals(action)) {
             Log.v(TAG, "onStartCommand: Received recording stop intent, stopping recording");
-            stopScreenRecord();
+            stopRecord();
             result = START_NOT_STICKY;
         } else {
             Log.v(TAG, "onStartCommand: Received unknown recording intent with action: "
@@ -109,10 +109,10 @@ public class RecorderService extends Service {
     }
 
     /**
-     * start screen recording
+     * start recording
      */
     @RequiresApi(api = Build.VERSION_CODES.Q)
-    private void startScreenRecord(MediaProjectionManager mediaProjectionManager,
+    private void startRecord(MediaProjectionManager mediaProjectionManager,
                                    final Intent intent) {
         if (recorderThread != null) {
             if (recorderThread.isRecordingRunning()) {
@@ -186,9 +186,9 @@ public class RecorderService extends Service {
     }
 
     /**
-     * stop screen recording
+     * stop recording
      */
-    private void stopScreenRecord() {
+    private void stopRecord() {
         if (recorderThread != null) {
             recorderThread.stopRecording();
             recorderThread = null;

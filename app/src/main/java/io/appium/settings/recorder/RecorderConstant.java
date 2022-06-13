@@ -72,4 +72,6 @@ public class RecorderConstant {
                     Pair.create(320, 240),
                     Pair.create(176, 144)
                     );
+    // 1048576 Bps == 1 Mbps (1024*1024)
+    public static final float BPS_IN_MBPS = 1048576f;
 }
