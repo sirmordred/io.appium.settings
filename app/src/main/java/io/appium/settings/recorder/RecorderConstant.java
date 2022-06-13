@@ -49,7 +49,7 @@ public class RecorderConstant {
     public static final int AUDIO_CODEC_REPEAT_PREV_FRAME_AFTER_MS = 1000000;
     public static final int AUDIO_CODEC_I_FRAME_INTERVAL_MS = 5;
     public static final int AUDIO_CODEC_DEFAULT_BITRATE = 64000;
-    public static final int VIDEO_CODEC_FRAME_RATE = 30;
+    public static final int VIDEO_CODEC_DEFAULT_FRAME_RATE = 30;
     public static final long MEDIA_QUEUE_BUFFERING_DEFAULT_TIMEOUT_MS = 10000;
     public static final long NANOSECONDS_IN_MICROSECOND = 1000;
     public static final String NO_PATH_SET = "";

@@ -43,6 +43,7 @@ import static io.appium.settings.recorder.RecorderConstant.NANOSECONDS_IN_MICROS
 import static io.appium.settings.recorder.RecorderConstant.NO_TIMESTAMP_SET;
 import static io.appium.settings.recorder.RecorderConstant.NO_TRACK_INDEX_SET;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_DEFAULT_VIDEO_MIME_TYPE;
+import static io.appium.settings.recorder.RecorderConstant.VIDEO_CODEC_DEFAULT_FRAME_RATE;
 
 public class RecorderThread implements Runnable {
 
@@ -115,14 +116,14 @@ public class RecorderThread implements Runnable {
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private MediaFormat initVideoEncoderFormat(String videoMime, int videoWidth,
-                                                int videoHeight, int videoBitrate) {
+                                               int videoHeight, int videoBitrate,
+                                               int videoFrameRate) {
         MediaFormat encoderFormat = MediaFormat.createVideoFormat(videoMime, videoWidth,
                 videoHeight);
         encoderFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         encoderFormat.setInteger(MediaFormat.KEY_BIT_RATE, videoBitrate);
-        encoderFormat.setInteger(MediaFormat.KEY_FRAME_RATE,
-                RecorderConstant.VIDEO_CODEC_FRAME_RATE);
+        encoderFormat.setInteger(MediaFormat.KEY_FRAME_RATE, videoFrameRate);
         encoderFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER,
                 RecorderConstant.AUDIO_CODEC_REPEAT_PREV_FRAME_AFTER_MS);
         encoderFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,
@@ -240,9 +241,9 @@ public class RecorderThread implements Runnable {
                         - startTimestampUs);
     }
 
-    private int calculateBitRate(int width, int height) {
+    private int calculateBitRate(int width, int height, int frameRate) {
         final int bitrate = (int) (RecorderConstant.BITRATE_MULTIPLIER *
-                RecorderConstant.VIDEO_CODEC_FRAME_RATE * width * height);
+                frameRate * width * height);
         Log.i(TAG, String.format("Recording starting with bitrate=%5.2f[Mbps]",
                 bitrate / 1024f / 1024f));
         return bitrate;
@@ -354,12 +355,15 @@ public class RecorderThread implements Runnable {
                     .getCodecInfo().getCapabilitiesForType(RECORDING_DEFAULT_VIDEO_MIME_TYPE)
                     .getVideoCapabilities();
 
+            int videoFrameRate = Math.min(VIDEO_CODEC_DEFAULT_FRAME_RATE,
+                    videoEncoderCapabilities.getSupportedFrameRates().getUpper());
+
             int videoBitrate = videoEncoderCapabilities.getBitrateRange()
-                    .clamp(calculateBitRate(this.videoWidth, this.videoHeight));
+                    .clamp(calculateBitRate(this.videoWidth, this.videoHeight, videoFrameRate));
 
             MediaFormat videoEncoderFormat =
                     initVideoEncoderFormat(RECORDING_DEFAULT_VIDEO_MIME_TYPE,
-                            this.videoWidth, this.videoHeight, videoBitrate);
+                            this.videoWidth, this.videoHeight, videoBitrate, videoFrameRate);
 
             videoEncoder.configure(videoEncoderFormat, null, null,
                     MediaCodec.CONFIGURE_FLAG_ENCODE);
