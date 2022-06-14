@@ -415,7 +415,7 @@ public class RecorderThread implements Runnable {
                 }
             }
         } catch (Exception mainException) {
-            mainException.printStackTrace();
+            Log.e(TAG, "run: Exception occurred during recording", mainException);
         } finally {
             if (muxer != null) {
                 muxer.stop();

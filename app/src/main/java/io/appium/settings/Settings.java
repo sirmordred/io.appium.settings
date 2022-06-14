@@ -144,12 +144,12 @@ public class Settings extends Activity {
                 return;
             }
 
-        /*
-        External Storage File Directory for app
-        (i.e /storage/emulated/0/Android/data/io.appium.settings/files) may not be created
-        so we need to call getExternalFilesDir() method twice
-        source:https://www.androidbugfix.com/2021/10/getexternalfilesdirnull-returns-null-in.html
-         */
+            /*
+             External Storage File Directory for app
+             (i.e /storage/emulated/0/Android/data/io.appium.settings/files) may not be created
+             so we need to call getExternalFilesDir() method twice
+             source:https://www.androidbugfix.com/2021/10/getexternalfilesdirnull-returns-null-in.html
+            */
             File externalStorageFile = getExternalFilesDir(null);
             if (externalStorageFile == null) {
                 externalStorageFile = getExternalFilesDir(null);
