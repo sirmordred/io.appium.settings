@@ -30,7 +30,6 @@ import android.media.projection.MediaProjection;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 
@@ -343,7 +342,6 @@ public class RecorderThread implements Runnable {
         MediaCodec videoEncoder = null;
         MediaCodec audioEncoder = null;
         Surface surface = null;
-        AudioRecord audioRecord = null;
         Thread audioRecordThread = null;
         MediaMuxer muxer = null;
         try {
@@ -380,7 +378,7 @@ public class RecorderThread implements Runnable {
             audioEncoder = initAudioCodec(sampleRate);
             audioEncoder.start();
 
-            audioRecord = initAudioRecord(this.mediaProjection, sampleRate);
+            AudioRecord audioRecord = initAudioRecord(this.mediaProjection, sampleRate);
 
             muxer = new MediaMuxer(this.outputFilePath,
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);

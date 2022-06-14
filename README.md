@@ -323,7 +323,7 @@ error will be returned and the corresponding log message would be written into l
 
 ## Internal Audio & Video Recording
 
-REQUIRED STEPS to activate recording:
+Required steps to activate recording:
 
 ```bash
 adb shell pm grant io.appium.settings android.permission.RECORD_AUDIO
