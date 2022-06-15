@@ -26,7 +26,7 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.os.Build;
 import android.util.Log;
-import android.util.Pair;
+import android.util.Size;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
@@ -222,18 +222,18 @@ public class RecorderUtil {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public static Pair<Integer, Integer> getRecordingResolution(int userRequestedResolutionMode) {
+    public static Size getRecordingResolution(int userRequestedResolutionMode) {
         switch(userRequestedResolutionMode) {
             case RECORDING_RESOLUTION_FULL_HD:
-                return Pair.create(1920, 1080);
+                return new Size(1920, 1080);
             case RECORDING_RESOLUTION_HD:
-                return Pair.create(1280, 720);
+                return new Size(1280, 720);
             case RECORDING_RESOLUTION_480P:
-                return Pair.create(720, 480);
+                return new Size(720, 480);
             case RECORDING_RESOLUTION_QVGA:
-                return Pair.create(320, 240);
+                return new Size(320, 240);
             case RECORDING_RESOLUTION_QCIF:
-                return Pair.create(176, 144);
+                return new Size(176, 144);
             default:
                 break;
         }
@@ -241,7 +241,7 @@ public class RecorderUtil {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public static Pair<Integer, Integer> getSupportedMaxResolution() {
+    public static Size getSupportedMaxResolution() {
         try {
             MediaCodec videoEncoder =
                     MediaCodec.createEncoderByType(RECORDING_DEFAULT_VIDEO_MIME_TYPE);
@@ -249,9 +249,9 @@ public class RecorderUtil {
                     .getCodecInfo().getCapabilitiesForType(RECORDING_DEFAULT_VIDEO_MIME_TYPE)
                     .getVideoCapabilities();
 
-            for(Pair<Integer, Integer> resolution: RECORDING_RESOLUTION_LIST) {
+            for(Size resolution: RECORDING_RESOLUTION_LIST) {
                 if (videoEncoderCapabilities.isSizeSupported(
-                        resolution.first, resolution.second)) {
+                        resolution.getWidth(), resolution.getHeight())) {
                     return resolution;
                 }
             }

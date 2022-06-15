@@ -25,7 +25,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Pair;
+import android.util.Size;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -113,7 +113,7 @@ public class RecorderService extends Service {
      */
     @RequiresApi(api = Build.VERSION_CODES.Q)
     private void startRecord(MediaProjectionManager mediaProjectionManager,
-                                   final Intent intent) {
+                             final Intent intent) {
         if (recorderThread != null) {
             if (recorderThread.isRecordingRunning()) {
                 Log.v(TAG, "Recording is already continuing, exiting");
@@ -154,11 +154,11 @@ public class RecorderService extends Service {
         int recordingResolutionMode = intent.getIntExtra(ACTION_RECORDING_RESOLUTION,
                 NO_RESOLUTION_MODE_SET);
 
-        Pair<Integer, Integer> recordingResolution = RecorderUtil.
+        Size recordingResolution = RecorderUtil.
                 getRecordingResolution(recordingResolutionMode);
 
-        int resolutionWidth = recordingResolution.first;
-        int resolutionHeight = recordingResolution.second;
+        int resolutionWidth = recordingResolution.getWidth();
+        int resolutionHeight = recordingResolution.getHeight();
 
         /*
         MediaCodec's tested supported resolutions (as per CTS tests) are for landscape mode as default (1920x1080, 1280x720 etc.)
@@ -166,8 +166,8 @@ public class RecorderService extends Service {
         we need to flip width/height to match it
          */
         if (rawWidth < rawHeight) {
-            resolutionWidth = recordingResolution.second;
-            resolutionHeight = recordingResolution.first;
+            resolutionWidth = recordingResolution.getHeight();
+            resolutionHeight = recordingResolution.getWidth();
         }
 
         Log.v(TAG, String.format("Starting recording with resolution(widthxheight): (%dx%d)",

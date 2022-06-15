@@ -17,11 +17,13 @@
 package io.appium.settings.recorder;
 
 import android.media.MediaFormat;
-import android.util.Pair;
+import android.os.Build;
+import android.util.Size;
 
 import java.util.Arrays;
 import java.util.List;
 
+import androidx.annotation.RequiresApi;
 import io.appium.settings.BuildConfig;
 
 public class RecorderConstant {
@@ -41,8 +43,9 @@ public class RecorderConstant {
     public static final int RECORDING_RESOLUTION_480P = 3;
     public static final int RECORDING_RESOLUTION_QVGA = 2;
     public static final int RECORDING_RESOLUTION_QCIF = 1;
-    public static final Pair<Integer, Integer> RECORDING_RESOLUTION_DEFAULT =
-            Pair.create(1920, 1080);
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_DEFAULT =
+            new Size(1920, 1080);
     public static final float BITRATE_MULTIPLIER = 0.25f;
     public static final int AUDIO_CODEC_SAMPLE_RATE_HZ = 44100;
     public static final int AUDIO_CODEC_CHANNEL_COUNT = 1;
@@ -63,15 +66,14 @@ public class RecorderConstant {
     public static final String RECORDING_PRIORITY_MIN = "low";
     public static final int RECORDING_PRIORITY_DEFAULT = Thread.MAX_PRIORITY;
     public static final int RECORDING_MAX_DURATION_DEFAULT_MS = 15 * 60 * 1000; // 15 Minutes, in milliseconds
-    // Pair.create(int width, int height)
-    public static final List<Pair<Integer, Integer>> RECORDING_RESOLUTION_LIST =
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final List<Size> RECORDING_RESOLUTION_LIST =
             Arrays.asList(
-                    Pair.create(1920, 1080),
-                    Pair.create(1280, 720),
-                    Pair.create(720, 480),
-                    Pair.create(320, 240),
-                    Pair.create(176, 144)
-                    );
+                    new Size(1920, 1080),
+                    new Size(1280, 720),
+                    new Size(720, 480),
+                    new Size(320, 240),
+                    new Size(176, 144));
     // 1048576 Bps == 1 Mbps (1024*1024)
     public static final float BPS_IN_MBPS = 1048576f;
 }
