@@ -39,7 +39,6 @@ import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_RESU
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_ROTATION;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_START;
 import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP;
-import static io.appium.settings.recorder.RecorderConstant.NO_RESOLUTION_MODE_SET;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_ROTATION_DEFAULT_DEGREE;
@@ -151,8 +150,7 @@ public class RecorderService extends Service {
         int rawHeight = metrics.heightPixels;
         int rawDpi = metrics.densityDpi;
 
-        int recordingResolutionMode = intent.getIntExtra(ACTION_RECORDING_RESOLUTION,
-                NO_RESOLUTION_MODE_SET);
+        String recordingResolutionMode = intent.getStringExtra(ACTION_RECORDING_RESOLUTION);
 
         Size recordingResolution = RecorderUtil.
                 getRecordingResolution(recordingResolutionMode);

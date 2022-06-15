@@ -70,7 +70,7 @@ public class Settings extends Activity {
     private int recordingRotation = RECORDING_ROTATION_DEFAULT_DEGREE;
     private int recordingPriority = RECORDING_PRIORITY_DEFAULT;
     private int recordingMaxDuration = RECORDING_MAX_DURATION_DEFAULT_MS;
-    private int recordingResolutionMode = NO_RESOLUTION_MODE_SET;
+    private String recordingResolutionMode = NO_RESOLUTION_MODE_SET;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {

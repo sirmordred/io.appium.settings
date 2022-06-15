@@ -203,39 +203,73 @@ public class RecorderUtil {
         return RECORDING_MAX_DURATION_DEFAULT_MS;
     }
 
-    public static int getRecordingResolutionMode(Intent intent) {
+    public static String getRecordingResolutionMode(Intent intent) {
         if (intent.hasExtra(ACTION_RECORDING_RESOLUTION)) {
-            try {
-                int userRequestedResolutionMode =
-                        Integer.parseInt(intent.getStringExtra(ACTION_RECORDING_RESOLUTION));
-                if (userRequestedResolutionMode < 1 || userRequestedResolutionMode > 5) {
-                    return NO_RESOLUTION_MODE_SET;
-                }
-                return userRequestedResolutionMode;
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "Exception while retrieving recording priority", e);
+            String userRequestedResolutionMode =
+                    intent.getStringExtra(ACTION_RECORDING_RESOLUTION);
+            if (userRequestedResolutionMode == null) {
+                Log.e(TAG, "Unable to retrieve resolution mode from intent extras, " +
+                        "using max supported resolution");
+                return NO_RESOLUTION_MODE_SET;
             }
+            return userRequestedResolutionMode;
         } else {
-            Log.e(TAG, "Unable to retrieve recording priority");
+            Log.v(TAG, "Unable to retrieve resolution mode from intent, " +
+                    "using max supported resolution");
         }
         return NO_RESOLUTION_MODE_SET;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public static Size getRecordingResolution(int userRequestedResolutionMode) {
-        switch(userRequestedResolutionMode) {
-            case RECORDING_RESOLUTION_FULL_HD:
-                return new Size(1920, 1080);
-            case RECORDING_RESOLUTION_HD:
-                return new Size(1280, 720);
-            case RECORDING_RESOLUTION_480P:
-                return new Size(720, 480);
-            case RECORDING_RESOLUTION_QVGA:
-                return new Size(320, 240);
-            case RECORDING_RESOLUTION_QCIF:
-                return new Size(176, 144);
-            default:
-                break;
+    public static Size getRecordingResolution(String userRequestedResolutionMode) {
+        if (userRequestedResolutionMode == null) {
+            Log.e(TAG, "Unable to retrieve resolution mode, " +
+                    "using max supported resolution");
+            return getSupportedMaxResolution();
+        }
+        if (userRequestedResolutionMode.isEmpty()) {
+            Log.v(TAG, "Unable to retrieve resolution mode, " +
+                    "using max supported resolution");
+            return getSupportedMaxResolution();
+        }
+        // Split resolution mode (e.g 1920x1080) to it's width and height values,
+        // lowercase 'x' or uppercase 'X' are both accepted/valid separator
+        String[] resolutionWidthHeight = userRequestedResolutionMode
+                .toLowerCase()
+                .split("x");
+        if (resolutionWidthHeight.length != 2) {
+            Log.e(TAG, "Invalid resolution mode passed by user, " +
+                    "using max supported resolution");
+            return getSupportedMaxResolution();
+        }
+
+        try {
+            int requestedResolutionWidth =
+                    Integer.parseInt(resolutionWidthHeight[0]);
+            int requestedResolutionHeight =
+                    Integer.parseInt(resolutionWidthHeight[1]);
+
+            Size requestedResolution =
+                    new Size(requestedResolutionWidth, requestedResolutionHeight);
+
+            // android.util.Size's equality check (equals(Object) method) also accounts width/height equality
+            if (requestedResolution.equals(RECORDING_RESOLUTION_FULL_HD)) {
+                return RECORDING_RESOLUTION_FULL_HD;
+            } else if (requestedResolution.equals(RECORDING_RESOLUTION_HD)) {
+                return RECORDING_RESOLUTION_HD;
+            } else if (requestedResolution.equals(RECORDING_RESOLUTION_480P)) {
+                return RECORDING_RESOLUTION_480P;
+            } else if (requestedResolution.equals(RECORDING_RESOLUTION_QVGA)) {
+                return RECORDING_RESOLUTION_QVGA;
+            } else if (requestedResolution.equals(RECORDING_RESOLUTION_QCIF)) {
+                return RECORDING_RESOLUTION_QCIF;
+            } else {
+                Log.e(TAG, "Invalid resolution mode passed by user, " +
+                        "using max supported resolution");
+            }
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "Exception while parsing resolution mode argument, " +
+                    "using max supported resolution", e);
         }
         return getSupportedMaxResolution();
     }

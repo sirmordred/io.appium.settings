@@ -36,16 +36,21 @@ public class RecorderConstant {
     public static final String ACTION_RECORDING_FILENAME = "filename";
     public static final String ACTION_RECORDING_PRIORITY = "priority";
     public static final String ACTION_RECORDING_MAX_DURATION = "max_duration_sec";
-    public static final String ACTION_RECORDING_RESOLUTION = "resolution_mode";
-    public static final String RECORDING_DEFAULT_VIDEO_MIME_TYPE = MediaFormat.MIMETYPE_VIDEO_AVC;
-    public static final int RECORDING_RESOLUTION_FULL_HD = 5;
-    public static final int RECORDING_RESOLUTION_HD = 4;
-    public static final int RECORDING_RESOLUTION_480P = 3;
-    public static final int RECORDING_RESOLUTION_QVGA = 2;
-    public static final int RECORDING_RESOLUTION_QCIF = 1;
+    public static final String ACTION_RECORDING_RESOLUTION = "resolution";
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public static final Size RECORDING_RESOLUTION_DEFAULT =
-            new Size(1920, 1080);
+    public static final String RECORDING_DEFAULT_VIDEO_MIME_TYPE = MediaFormat.MIMETYPE_VIDEO_AVC;
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_FULL_HD = new Size(1920, 1080);
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_HD = new Size(1280, 720);
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_480P = new Size(720, 480);
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_QVGA = new Size(320, 240);
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_QCIF = new Size(176, 144);
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static final Size RECORDING_RESOLUTION_DEFAULT = new Size(1920, 1080);
     public static final float BITRATE_MULTIPLIER = 0.25f;
     public static final int AUDIO_CODEC_SAMPLE_RATE_HZ = 44100;
     public static final int AUDIO_CODEC_CHANNEL_COUNT = 1;
@@ -60,7 +65,7 @@ public class RecorderConstant {
     // Assume 0 degree == portrait as default
     public static final int RECORDING_ROTATION_DEFAULT_DEGREE = 0;
     public static final int NO_TRACK_INDEX_SET = -1;
-    public static final int NO_RESOLUTION_MODE_SET = -1;
+    public static final String NO_RESOLUTION_MODE_SET = "";
     public static final String RECORDING_PRIORITY_MAX = "high";
     public static final String RECORDING_PRIORITY_NORM = "normal";
     public static final String RECORDING_PRIORITY_MIN = "low";
