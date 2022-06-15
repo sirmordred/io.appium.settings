@@ -158,24 +158,27 @@ public class RecorderUtil {
 
     public static int getRecordingPriority(Intent intent) {
         if (intent.hasExtra(ACTION_RECORDING_PRIORITY)) {
-            try {
-                int userRequestedRecordingPriority =
-                        Integer.parseInt(intent.getStringExtra(ACTION_RECORDING_PRIORITY));
-                switch(userRequestedRecordingPriority) {
-                    case RECORDING_PRIORITY_MAX:
-                        return Thread.MAX_PRIORITY;
-                    case RECORDING_PRIORITY_MIN:
-                        return Thread.MIN_PRIORITY;
-                    case RECORDING_PRIORITY_NORM:
-                        return Thread.NORM_PRIORITY;
-                    default:
-                        break;
-                }
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "Exception while retrieving recording priority", e);
+            String userRequestedRecordingPriority =
+                    intent.getStringExtra(ACTION_RECORDING_PRIORITY);
+
+            if (userRequestedRecordingPriority == null) {
+                Log.e(TAG, "Unable to retrieve recording priority from intent extras");
+                return RECORDING_PRIORITY_DEFAULT;
+            }
+
+            switch(userRequestedRecordingPriority) {
+                case RECORDING_PRIORITY_MAX:
+                    return Thread.MAX_PRIORITY;
+                case RECORDING_PRIORITY_MIN:
+                    return Thread.MIN_PRIORITY;
+                case RECORDING_PRIORITY_NORM:
+                    return Thread.NORM_PRIORITY;
+                default:
+                    Log.e(TAG, "Invalid recording priority passed by user");
+                    break;
             }
         } else {
-            Log.e(TAG, "Unable to retrieve recording priority");
+            Log.e(TAG, "Unable to retrieve recording priority from intent");
         }
         return RECORDING_PRIORITY_DEFAULT;
     }

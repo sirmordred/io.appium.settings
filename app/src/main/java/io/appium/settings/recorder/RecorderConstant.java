@@ -58,9 +58,9 @@ public class RecorderConstant {
     public static final int RECORDING_ROTATION_DEFAULT_DEGREE = 0;
     public static final int NO_TRACK_INDEX_SET = -1;
     public static final int NO_RESOLUTION_MODE_SET = -1;
-    public static final int RECORDING_PRIORITY_MAX = 2;
-    public static final int RECORDING_PRIORITY_NORM = 1;
-    public static final int RECORDING_PRIORITY_MIN = 0;
+    public static final String RECORDING_PRIORITY_MAX = "high";
+    public static final String RECORDING_PRIORITY_NORM = "normal";
+    public static final String RECORDING_PRIORITY_MIN = "low";
     public static final int RECORDING_PRIORITY_DEFAULT = Thread.MAX_PRIORITY;
     public static final int RECORDING_MAX_DURATION_DEFAULT_MS = 15 * 60 * 1000; // 15 Minutes, in milliseconds
     // Pair.create(int width, int height)

@@ -59,7 +59,7 @@ import static io.appium.settings.recorder.RecorderConstant.ACTION_RECORDING_STOP
 import static io.appium.settings.recorder.RecorderConstant.NO_PATH_SET;
 import static io.appium.settings.recorder.RecorderConstant.NO_RESOLUTION_MODE_SET;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_MAX_DURATION_DEFAULT_MS;
-import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_MAX;
+import static io.appium.settings.recorder.RecorderConstant.RECORDING_PRIORITY_DEFAULT;
 import static io.appium.settings.recorder.RecorderConstant.RECORDING_ROTATION_DEFAULT_DEGREE;
 import static io.appium.settings.recorder.RecorderConstant.REQUEST_CODE_SCREEN_CAPTURE;
 
@@ -68,7 +68,7 @@ public class Settings extends Activity {
 
     private String recordingOutputPath = NO_PATH_SET;
     private int recordingRotation = RECORDING_ROTATION_DEFAULT_DEGREE;
-    private int recordingPriority = RECORDING_PRIORITY_MAX;
+    private int recordingPriority = RECORDING_PRIORITY_DEFAULT;
     private int recordingMaxDuration = RECORDING_MAX_DURATION_DEFAULT_MS;
     private int recordingResolutionMode = NO_RESOLUTION_MODE_SET;
 
