@@ -66,6 +66,16 @@ public class RecorderConstant {
     public static final String RECORDING_PRIORITY_MIN = "low";
     public static final int RECORDING_PRIORITY_DEFAULT = Thread.MAX_PRIORITY;
     public static final int RECORDING_MAX_DURATION_DEFAULT_MS = 15 * 60 * 1000; // 15 Minutes, in milliseconds
+    /*
+    * Note: Reason we limit recording to following resolution list is that
+    * android's AVC/H264 video encoder capabilities varies device-to-device (OEM modifications)
+    * and with values larger than 1920x1080, isSizeSupported(width, height) method (see https://developer.android.com/reference/android/media/MediaCodecInfo.VideoCapabilities#isSizeSupported(int,%20int))
+    * returns false on tested devices and also with arbitrary values between supported range,
+    * sometimes MediaEncoder.configure() method crashes with an exception on some phones
+    * also default supported resolutions as per CTS tests are limited to following values (values between 176x144 and 1920x1080)
+    * see https://android.googlesource.com/platform/cts/+/refs/heads/android12-qpr1-release/tests/tests/media/src/android/media/cts/VideoEncoderTest.java#1766
+    * because of these reasons, to support wide variety of devices, we pre-limit resolution modes to the following values
+     */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public static final List<Size> RECORDING_RESOLUTION_LIST =
             Arrays.asList(
